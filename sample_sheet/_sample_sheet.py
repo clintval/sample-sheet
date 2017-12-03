@@ -11,7 +11,6 @@ from tabulate import tabulate
 from terminaltables import SingleTable
 
 __all__ = [
-    'DEFAULT_SAMPLE_KEYS',
     'Sample',
     'SampleSheet']
 
@@ -26,6 +25,26 @@ DEFAULT_SAMPLE_KEYS = [
     'index',
     'I5_Index_ID',
     'index2']
+
+SUMMARY_HEADER = [
+    'Sample_ID',
+    'Sample_Name',
+    'Library_ID',
+    'Sample_Project',
+    'Description']
+
+SAMPLE_IDENTIFIERS = [
+    'Sample_ID',
+    'Sample_Name',
+    'Library_ID',
+    'I7_Index_ID',
+    'index',
+    'I5_Index_ID',
+    'index2']
+
+SAMPLE_DESCRIPTIONS = [
+    'Sample_ID',
+    'Description']
 
 
 class Sample(object):
@@ -59,9 +78,9 @@ class Sample(object):
     def is_paired_end(self):
         return self.index is not None and self.index2 is not None
 
-    def __getattr__(self, x):
+    def __getattr__(self, attr):
         """Return None if an attribute is unspecified"""
-        return self.__dict__.get(x, None)
+        return self.__dict__.get(attr, None)
 
     def __str__(self):
         return f'{self.__class__.__name__}("{self.Sample_Name or ""}")'
@@ -124,8 +143,6 @@ class SampleSheet():
         self._parse(self.path)
 
     def _parse(self, path):
-        self.path = str(path)
-
         # Use `smart_open` to read in the entire file into a string, make that
         # string a file handle and wrap in a `csv.reader` instance.
         handle = csv.reader(
@@ -135,6 +152,7 @@ class SampleSheet():
             skipinitialspace=True)
 
         sample_header = None
+
         for line in handle:
 
             # If this row matches a section pattern save header and advance.
@@ -175,44 +193,47 @@ class SampleSheet():
                 sample = Sample().from_dict(dict(zip(sample_header, line)))
                 self._samples.append(sample)
 
-    def add_sample(self):
+    def add_sample(self, mappable):
         # TODO: Add sample validation
         #    - Read structure is same for all
         #    - Has required fields
         #    - Does not have illegal characters
         #    - No duplicate Sample_Name / Sample_Library collisions
+        #    - Assert there are samples
         pass
 
     @property
     def experimental_design(self):
-        if len(self.samples) == 0:
-            return 'None'
-
-        table = []
-        for sample in self.samples:
-            table.append([
-                sample.Sample_ID or '',
-                sample.Sample_Name or '',
-                sample.Library_ID or '',
-                sample.Sample_Project or '',
-                sample.Description or ''])
-
         markdown = tabulate(
-            table,
-            headers=[
-                'Sample_ID',
-                'Sample_Name',
-                'Library_ID',
-                'Sample_Project',
-                'Description'],
+            [(getattr(sample, title) or '' for title in SUMMARY_HEADER)
+             for sample in self.samples],
+            headers=SUMMARY_HEADER,
             tablefmt='pipe')
 
-        return markdown
+        # If we are running in an IPython interpreter, then the variable
+        # `__IPYTHON__` exists in the global namespace and we should render
+        # the markdown. If not, return the formatted table as just a str.
+        try:
+            __IPYTHON__  # noqa
+            from IPython.display import Markdown
+            return Markdown(markdown)
+        except (NameError, ImportError):
+            return markdown
+
+    @property
+    def samples(self):
+        return self._samples
 
     def __repr__(self):
         return f"{self.__class__.__name__}('{self.path}')"
 
     def __str__(self):
+        """Prints a summary unicode representation of this sample sheet if the
+        `__str__()` method is called on a device that identifies as a TTY.
+        If no TTY is detected then return the invocable representation of this
+        instance.
+
+        """
         try:
             isatty = os.isatty(sys.stdout.fileno())
         except OSError:
@@ -220,55 +241,35 @@ class SampleSheet():
 
         return self.__unicode__() if isatty else self.__repr__()
 
-    @property
-    def samples(self):
-        return self._samples
-
     def __unicode__(self):
+        """Return summary unicode tables of this sample sheet."""
         header = SingleTable([], 'Header')
-        settings = SingleTable([], 'Settings')
-        sample_main = SingleTable([], 'Sample Identifiers')
-        sample_desc = SingleTable([], 'Sample Description')
-
+        header.inner_heading_row_border = False
         for key in self.header.keys:
-            header.table_data.append((key, getattr(self.header, key)))
+            header.table_data.append((key, getattr(self.header, key) or ''))
 
+        setting = SingleTable([], 'Settings')
+        setting.inner_heading_row_border = False
         for key in self.settings.keys:
-            settings.table_data.append((key, getattr(self.settings, key)))
+            setting.table_data.append((key, getattr(self.settings, key) or ''))
+        setting.table_data.append(('Reads', ', '.join(map(str, self.reads))))
 
-        settings.table_data.append(('Reads', ', '.join(map(str, self.reads))))
-
-        sample_main.table_data.append((
-            'ID',
-            'Name',
-            'Library',
-            'I7 Index',
-            '',
-            'I5 Index',
-            ''))
-
-        sample_desc.table_data.append(('ID', 'Description'))
-        width = sample_desc.column_max_width(-1)
+        sample_main = SingleTable([SAMPLE_IDENTIFIERS], 'Identifiers')
+        sample_desc = SingleTable([SAMPLE_DESCRIPTIONS], 'Descriptions')
+        description_width = sample_desc.column_max_width(-1)
 
         for sample in self.samples:
-            sample_main.table_data.append((
-                sample.Sample_ID,
-                sample.Sample_Name,
-                sample.Library_ID,
-                sample.I7_Index_ID,
-                sample.index,
-                sample.I5_Index_ID,
-                sample.index2))
+            sample_main.table_data.append(
+                [getattr(sample, title) or '' for title in SAMPLE_IDENTIFIERS])
 
             sample_desc.table_data.append((
-                sample.Sample_ID,
-                '\n'.join(wrap(sample.Description, width))))
+                sample.Sample_ID or '',
+                '\n'.join(wrap(sample.Description or '', description_width))))
 
-        header.inner_heading_row_border = False
-        settings.inner_heading_row_border = False
-
-        return '\n'.join((
+        tables = [
             header.table,
-            settings.table,
+            setting.table,
             sample_main.table,
-            sample_desc.table))
+            sample_desc.table]
+
+        return '\n'.join(tables)
