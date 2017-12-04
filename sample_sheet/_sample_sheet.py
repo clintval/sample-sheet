@@ -4,6 +4,7 @@ import os
 import re
 import sys
 
+from pathlib import Path
 from textwrap import wrap
 
 from smart_open import smart_open
@@ -133,7 +134,7 @@ class SampleSheet():
             5. Add support for more than one sample index
 
         """
-        self.path = path
+        self.path = str(path)
 
         self.header = Header()
         self.settings = Settings()
@@ -203,6 +204,14 @@ class SampleSheet():
         pass
 
     @property
+    def is_paired_end(self):
+        return len(self.reads) == 2
+
+    @property
+    def is_single_indexed(self):
+        return all(sample.index2 is None for sample in self.samples)
+
+    @property
     def experimental_design(self):
         markdown = tabulate(
             [(getattr(sample, title) or '' for title in SUMMARY_HEADER)
@@ -223,6 +232,72 @@ class SampleSheet():
     @property
     def samples(self):
         return self._samples
+
+    def write_basecalling_params(self, outdir, lanes=4):
+        for lane in range(1, lanes + 1):
+            header = ['barcode_sequence_1', 'barcode_name', 'library_name']
+
+            if self.is_single_indexed:
+                def params(s):
+                    return s.index, s.index, s.Library_ID
+            else:
+                def params(s):
+                    return s.index, s.index2, s.index + s.index2, s.Library_ID
+                header.insert(1, 'barcode_sequence_2')
+
+            table = [header, *[params(sample) for sample in self.samples]]
+
+            outfile = Path(outdir) / 'barcode_params.{}.txt'.format(lane)
+
+            with open(outfile.expanduser().resolve(), 'w') as handle:
+                writer = csv.writer(handle, delimiter='\t')
+                writer.writerows(table)
+
+    def write_library_params(self, outdir, bam_out_prefix, lanes=4):
+        header = ['BARCODE_1', 'OUTPUT', 'SAMPLE_ALIAS', 'LIBRARY_NAME', 'DS']
+
+        if not self.is_single_indexed:
+            header.insert(1, 'BARCODE_2')
+
+        for sample in self.samples:
+            sub_directory = f'{sample.Sample_Name}.{sample.Library_ID}'
+            bam_out = Path(bam_out_prefix) / sub_directory
+            os.makedirs(bam_out.expanduser().resolve(), exist_ok=True)
+
+        for lane in range(1, lanes + 1):
+            outfile = Path(outdir) / 'library_params.{}.txt'.format(lane)
+            with open(outfile.expanduser().resolve(), 'w') as handle:
+                writer = csv.writer(handle, delimiter='\t')
+                writer.writerow(header)
+
+                for sample in self.samples:
+                    filename = (
+                        f'{sample.Sample_Name}'
+                        f'.{sample.index}{sample.index2 or ""}'
+                        f'.{lane}.bam')
+
+                    line = [
+                        sample.index,
+                        bam_out.expanduser().resolve() / filename,
+                        sample.Sample_Name,
+                        sample.Library_ID,
+                        sample.Description or '']
+
+                    if not self.is_single_indexed:
+                        line.insert(1, sample.index2)
+
+                    writer.writerow(line)
+
+                u_out = (
+                    Path(bam_out_prefix).expanduser().resolve() /
+                    f'unmatched.{lane}.bam')
+
+                line = ['N', str(u_out), 'unmatched', 'unmatchedunmatched', '']
+
+                if not self.is_single_indexed:
+                    line.insert(1, 'N')
+
+                writer.writerow(line)
 
     def __repr__(self):
         return f"{self.__class__.__name__}('{self.path}')"
