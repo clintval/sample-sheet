@@ -5,12 +5,11 @@ import click
 
 from sample_sheet import SampleSheet
 
-
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.argument('path')
 def sample_sheet_summary(path):
     """Display summary information about an Illumina sample sheet."""
-    print(SampleSheet(Path(path).resolve()))
+    print(SampleSheet(path))
 
 
 if __name__ == '__main__':
