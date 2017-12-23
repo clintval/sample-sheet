@@ -96,7 +96,29 @@ class Sample(object):
 
 
 class ReadStructure(object):
+    """ Information regarding the order and number of cycles in a sequence of
+    sample template bases, indexes, and unique molecular identifiers (UMI).
+
+    The tokens follow this scheme:
+
+        - T: template base
+        - B: sample index
+        - M: unique molecular identifer
+
+    Examples
+    --------
+    >>> rs = ReadStructure("10M141T8B")
+    >>> rs.is_paired
+    False
+    >>> rs.has_umi
+    True
+    >>> rs.tokens
+    ["10M", "141T", "8B"]
+
+    """
     _token_pattern = re.compile('(\d+[BMT])')
+
+    # Token can repeat one or more times along the entire string.
     _valid_pattern = re.compile('^{}+$'.format(_token_pattern.pattern))
 
     _index_pattern = re.compile('(\d+B)')
@@ -105,42 +127,50 @@ class ReadStructure(object):
 
     def __init__(self, structure):
         if not bool(self._valid_pattern.match(structure)):
-            raise ValueError(f'Not a valid read structure: {structure}')
+            raise ValueError('Not a valid structure: {}'.format(structure))
         self.structure = structure
 
     @property
     def is_dual_indexed(self):
+        """Return if this read structure is dual indexed."""
         return len(self._index_pattern.findall(self.structure)) == 2
 
     @property
     def is_paired(self):
+        """Return if this read structure is paired."""
         return len(self._template_pattern.findall(self.structure)) == 2
 
     @property
     def has_umi(self):
+        """Return if this read structure has any UMI tokens."""
         return len(self._umi_pattern.findall(self.structure)) > 0
 
     @property
     def index_cycles(self):
+        """The number of cycles dedicated to indexes."""
         tokens = self._index_pattern.findall(self.structure)
         return sum((int(re.sub(r'\D', '', token)) for token in tokens))
 
     @property
     def template_cycles(self):
+        """The number of cycles dedicated to template."""
         tokens = self._template_pattern.findall(self.structure)
         return sum((int(re.sub(r'\D', '', token)) for token in tokens))
 
     @property
     def umi_cycles(self):
+        """The number of cycles dedicated to UMI."""
         tokens = self._umi_pattern.findall(self.structure)
         return sum((int(re.sub(r'\D', '', token)) for token in tokens))
 
     @property
     def total_cycles(self):
+        """The number of total number of cycles in the structure."""
         return sum((int(re.sub(r'\D', '', token)) for token in self.tokens))
 
     @property
     def tokens(self):
+        """Return a list of all tokens in the read structure."""
         return self._token_pattern.findall(self.structure)
 
     def __repr__(self):

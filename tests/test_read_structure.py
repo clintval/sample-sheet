@@ -1,5 +1,3 @@
-#from unittest import TestCase
-
 from nose.tools import eq_, assert_raises, assert_false, assert_true
 
 from sample_sheet import *  # Test import of __all__

@@ -1,3 +1,2 @@
 #!/usr/bin/env sh
-echo  $(dirname "${0}/tests")
-nosetests -v --progressive-with-bar --with-progressive $(basename "${0}/tests")
+nosetests -v --progressive-with-bar --with-progressive $(basename "${0}/tests") "${@}"
