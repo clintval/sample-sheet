@@ -18,7 +18,7 @@ setup(
         'terminaltables',
     ],
     extras_requires={
-        'test': ['nose', 'nose-progressive'],
+        'test': ['nose', 'nose-progressive', 'coverage'],
     },
     scripts=[
         'scripts/csv-whitespace-strip',
