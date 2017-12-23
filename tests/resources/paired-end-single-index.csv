@@ -1,0 +1,28 @@
+[Header],,,,,,,,
+IEM1FileVersion,4,,,,,,,
+Investigator Name,jdoe,,,,,,,
+Experiment Name,exp001,,,,,,,
+Date,11/16/2017,,,,,,,
+Workflow,SureSelectXT,,,,,,,
+Application,NextSeq FASTQ Only,,,,,,,
+Assay,SureSelectXT,,,,,,,
+Description,A description of this flow cell,,,,,,,
+Chemistry,Default,,,,,,,
+,,,,,,,,
+[Reads],,,,,,,,
+151,,,,,,,,
+151,,,,,,,,
+,,,,,,,,
+[Settings],,,,,,,,
+CreateFastqForIndexReads,1,,,,,,,
+BarcodeMismatches,2,,,,,,,
+,,,,,,,,
+[Data],,,,,,,,
+Sample_ID,Sample_Name,Library_ID,Sample_Project,Description,index,Target_Set,Reference_Name,Read_Structure
+1823A,1823A-tissue,2017-01-20,exp001,0.5x treatment,GAATCTGA,Intervals-001,mm10,151T8B151T
+1823B,1823B-tissue,2017-01-20,exp001,0.5x treatment,AGCAGGAA,Intervals-001,mm10,151T8B151T
+1824A,1824A-tissue,2017-01-20,exp001,1.0x treatment,GAGCTGAA,Intervals-001,mm10,151T8B151T
+1825A,1825A-tissue,2017-01-20,exp001,10.0x treatment,AAACATCG,Intervals-001,mm10,151T8B151T
+1826A,1826A-tissue,2017-01-20,exp001,100.0x treatment,GAGTTAGC,Intervals-001,mm10,151T8B151T
+1826B,1823A-tissue,2017-01-17,exp001,0.5x treatment,CGAACTTA,Intervals-001,mm10,151T8B151T
+1829A,1823B-tissue,2017-01-17,exp001,0.5x treatment,GATAGACA,Intervals-001,mm10,151T8B151T

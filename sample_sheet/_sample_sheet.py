@@ -12,6 +12,7 @@ from tabulate import tabulate
 from terminaltables import SingleTable
 
 __all__ = [
+    'ReadStructure',
     'Sample',
     'SampleSheet']
 
@@ -92,6 +93,63 @@ class Sample(object):
             f'Sample_ID="{self.Sample_ID}", '
             f'Library_ID="{self.Library_ID}", '
             f'Paired={self.is_paired_end})')
+
+
+class ReadStructure(object):
+    _token_pattern = re.compile('(\d+[BMT])')
+    _valid_pattern = re.compile('^{}+$'.format(_token_pattern.pattern))
+
+    _index_pattern = re.compile('(\d+B)')
+    _umi_pattern = re.compile('(\d+M)')
+    _template_pattern = re.compile('(\d+T)')
+
+    def __init__(self, structure):
+        if not bool(self._valid_pattern.match(structure)):
+            raise ValueError(f'Not a valid read structure: {structure}')
+        self.structure = structure
+
+    @property
+    def is_dual_indexed(self):
+        return len(self._index_pattern.findall(self.structure)) == 2
+
+    @property
+    def is_paired(self):
+        return len(self._template_pattern.findall(self.structure)) == 2
+
+    @property
+    def has_umi(self):
+        return len(self._umi_pattern.findall(self.structure)) > 0
+
+    @property
+    def index_cycles(self):
+        tokens = self._index_pattern.findall(self.structure)
+        return sum((int(re.sub(r'\D', '', token)) for token in tokens))
+
+    @property
+    def template_cycles(self):
+        tokens = self._template_pattern.findall(self.structure)
+        return sum((int(re.sub(r'\D', '', token)) for token in tokens))
+
+    @property
+    def umi_cycles(self):
+        tokens = self._umi_pattern.findall(self.structure)
+        return sum((int(re.sub(r'\D', '', token)) for token in tokens))
+
+    @property
+    def total_cycles(self):
+        return sum((int(re.sub(r'\D', '', token)) for token in self.tokens))
+
+    @property
+    def tokens(self):
+        return self._token_pattern.findall(self.structure)
+
+    def __repr__(self):
+        return (
+            f'{self.__class__.__name__}('
+            f'structure="{self.structure}")')
+
+    def __str__(self):
+        return self.structure
 
 
 class SampleSheetSection(object):

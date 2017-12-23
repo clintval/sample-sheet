@@ -1,6 +1,6 @@
-import setuptools
+from setuptools import setup
 
-setuptools.setup(
+setup(
     name='sample_sheet',
     packages=['sample_sheet'],
     version='0.0.1',
@@ -17,6 +17,9 @@ setuptools.setup(
         'tabulate',
         'terminaltables',
     ],
+    extras_requires={
+        'test': ['nose', 'nose-progressive'],
+    },
     scripts=[
         'scripts/csv-whitespace-strip',
         'scripts/sample-sheet-summary',
@@ -24,5 +27,13 @@ setuptools.setup(
     license='MIT',
     zip_safe=True,
     keywords='illumina samplesheet sample sheet parser bioinformatics',
-    classifiers=[],
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+    ]
 )
