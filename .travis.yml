@@ -5,5 +5,6 @@ python:
   - "nightly"
 install:
   - pip install .
+  - pip install -e .[test]
 script:
-  - run-tests
+  - bash run-tests
