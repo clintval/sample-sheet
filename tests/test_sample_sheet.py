@@ -12,15 +12,15 @@ class TestSampleSheet:
     """Unit tests for ``SampleSheet``"""
 
     def test_blank_init(self):
-        """Tests init when no path is provided and path is None"""
+        """Test init when no path is provided and path is None"""
         assert_is_none(SampleSheet().path)
 
     def test_blank_init_repr(self):
-        """Tests ``__repr__()`` for path=None returns an exec statement"""
+        """Test ``__repr__()`` for path=None returns an exec statement"""
         eq_(SampleSheet().__repr__(), 'SampleSheet(None)')
 
     def test_is_single_end(self):
-        """Testing ``single_end`` property of ``SampleSheet``"""
+        """Test ``single_end`` property of ``SampleSheet``"""
         sample_sheet = SampleSheet()
         sample_sheet.reads = [151]
         assert_true(sample_sheet.is_single_end)
@@ -30,7 +30,7 @@ class TestSampleSheet:
         assert_false(sample_sheet.is_single_end)
 
     def test_is_paired_end(self):
-        """Testing ``paired_end`` property of ``SampleSheet``"""
+        """Test ``paired_end`` property of ``SampleSheet``"""
         sample_sheet = SampleSheet()
         sample_sheet.reads = [151]
         assert_false(sample_sheet.is_paired_end)
@@ -40,7 +40,7 @@ class TestSampleSheet:
         assert_true(sample_sheet.is_paired_end)
 
     def test_add_sample(self):
-        """Tests adding a single sample to a sample sheet"""
+        """Test adding a single sample to a sample sheet"""
         sample = Sample({'sample_id': 49})
         sample_sheet = SampleSheet()
 
@@ -52,7 +52,7 @@ class TestSampleSheet:
         eq_(sample_sheet.samples[0], sample)
 
     def test_add_sample_same_twice(self):
-        """Tests ``add_sample()`` to raise an exception when two samples having
+        """Test ``add_sample()`` to raise an exception when two samples having
         the same ``sample_id`` and ``library_id`` are added.
 
         """
@@ -70,7 +70,7 @@ class TestSampleSheet:
         assert_raises(ValueError, sample_sheet.add_sample, sample2)
 
     def test_add_sample_different_pairing(self):
-        """Tests ``add_sample()`` to raise an execption if ``reads`` have been
+        """Test ``add_sample()`` to raise an execption if ``reads`` have been
         specified in the sample sheet which indicate if the sample should be
         paired or not.
 
@@ -86,7 +86,7 @@ class TestSampleSheet:
         assert_raises(ValueError, sample_sheet.add_sample, sample)
 
     def test_add_sample_different_read_structure(self):
-        """Tests ``add_sample()`` to raise an exception when two samples having
+        """Test ``add_sample()`` to raise an exception when two samples having
         different ``read_structure`` attributes are added.
 
         """
@@ -98,7 +98,7 @@ class TestSampleSheet:
         assert_raises(ValueError, sample_sheet.add_sample, sample2)
 
     def test_experiment_design_plain_text(self):
-        """Tests ``experimental_design()`` plain text output"""
+        """Test ``experimental_design()`` plain text output"""
         mappable = {
             'sample_id': 493,
             'sample_name': '10x-FA',
@@ -120,7 +120,7 @@ class TestSampleSheet:
         eq_(design, table)
 
     def test_iter(self):
-        """Tests ``__iter__()`` and ``__next__()``"""
+        """Test ``__iter__()`` and ``__next__()``"""
         fake1, fake2 = Sample({'sample_id': 1}), Sample({'sample_id': 2})
         sample_sheet = SampleSheet()
         sample_sheet.add_sample(fake1)
@@ -130,7 +130,7 @@ class TestSampleSheet:
         eq_(next(iterator), fake2)
 
     def test_len(self):
-        """Tests ``__len__()``"""
+        """Test ``__len__()``"""
         fake1, fake2 = Sample({'sample_id': 1}), Sample({'sample_id': 2})
         sample_sheet = SampleSheet()
         sample_sheet.add_sample(fake1)
@@ -138,11 +138,11 @@ class TestSampleSheet:
         eq_(len(sample_sheet), 2)
 
     def test_str(self):
-        """Tests ``__str__()``, when not printing to a TTY"""
+        """Test ``__str__()``, when not printing to a TTY"""
         infile = './tests/resources/paired-end-single-index.csv'
         eq_(SampleSheet(infile).__str__(), 'SampleSheet("{}")'.format(infile))
 
     def test_repr(self):
-        """Tests ``__repr__()``"""
+        """Test ``__repr__()``"""
         infile = './tests/resources/paired-end-single-index.csv'
         eq_(SampleSheet(infile).__repr__(), 'SampleSheet("{}")'.format(infile))

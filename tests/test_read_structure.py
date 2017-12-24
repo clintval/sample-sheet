@@ -10,13 +10,13 @@ class TestReadStructure:
     """Unit tests for ``ReadStructure``"""
 
     def test_regex_validation(self):
-        """Tests read structure pattern validation on init"""
+        """Test read structure pattern validation on init"""
         assert_raises(ValueError, ReadStructure, '200BAD')
         assert_raises(ValueError, ReadStructure, '141C28B')
         assert_raises(ValueError, ReadStructure, '151T20M8BB')
 
     def test_single_end_tokens(self):
-        """Tests the tokens of an unpaired unindexed structure"""
+        """Test the tokens of an unpaired unindexed structure"""
         structure = '151T'
         read_structure = ReadStructure(structure)
         assert_false(read_structure.is_indexed)
@@ -27,7 +27,7 @@ class TestReadStructure:
         assert_false(read_structure.has_umi)
 
     def test_single_end_cycles(self):
-        """Tests the cycles of an unpaired unindexed structure"""
+        """Test the cycles of an unpaired unindexed structure"""
         structure = '151T'
         read_structure = ReadStructure(structure)
         eq_(read_structure.index_cycles, 0)
@@ -37,7 +37,7 @@ class TestReadStructure:
         eq_(read_structure.total_cycles, 151)
 
     def test_single_end_single_index_umi(self):
-        """Tests the tokens of a single-end single-indexed umi structure"""
+        """Test the tokens of a single-end single-indexed umi structure"""
         structure = '10M141T8B'
         read_structure = ReadStructure(structure)
         assert_true(read_structure.is_indexed)
@@ -48,7 +48,7 @@ class TestReadStructure:
         assert_true(read_structure.has_umi)
 
     def test_paired_end_dual_index_umi_tokens(self):
-        """Tests the tokens of a paired-end dual-indexed umi structure"""
+        """Test the tokens of a paired-end dual-indexed umi structure"""
         structure = '10M141T8B8B10M141T'
         read_structure = ReadStructure(structure)
         assert_true(read_structure.is_indexed)
@@ -59,7 +59,7 @@ class TestReadStructure:
         assert_true(read_structure.has_umi)
 
     def test_paired_end_dual_index_umi_cycles(self):
-        """Tests the cycles of a paired-end dual-indexed umi structure"""
+        """Test the cycles of a paired-end dual-indexed umi structure"""
         structure = '10M141T8B8B10M141T'
         read_structure = ReadStructure(structure)
         eq_(read_structure.index_cycles, 16)
@@ -69,7 +69,7 @@ class TestReadStructure:
         eq_(read_structure.total_cycles, 318)
 
     def test_paired_end_dual_index_umi_skips_cycles(self):
-        """Tests the cycles of a paired-end dual-indexed umi skip structure"""
+        """Test the cycles of a paired-end dual-indexed umi skip structure"""
         structure = '8M1S142T8B8B8M1S142T'
         read_structure = ReadStructure(structure)
         eq_(read_structure.index_cycles, 16)
@@ -79,21 +79,21 @@ class TestReadStructure:
         eq_(read_structure.total_cycles, 318)
 
     def test_all_tokens(self):
-        """Tests all tokens of a paired-end dual-indexed umi skip structure"""
+        """Test all tokens of a paired-end dual-indexed umi skip structure"""
         structure = '8M1S142T8B8B8M1S142T'
         read_structure = ReadStructure(structure)
         eq_(read_structure.tokens,
             ['8M', '1S', '142T', '8B', '8B', '8M', '1S', '142T'])
 
     def test_equal(self):
-        """Tests ``ReadStructure.__eq__()``"""
+        """Test ``ReadStructure.__eq__()``"""
         structure = '10M141T8B8B10M141T'
         eq_(ReadStructure(structure), ReadStructure(structure))
 
     def test_repr(self):
-        """Tests ``ReadStructure.__repr__()`` after initialization"""
+        """Test ``ReadStructure.__repr__()`` after initialization"""
         eq_(ReadStructure('51T').__repr__(), 'ReadStructure(structure="51T")')
 
     def test_str(self):
-        """Tests ``ReadStructure.__str__()`` after initialization"""
+        """Test ``ReadStructure.__str__()`` after initialization"""
         eq_(str(ReadStructure('51T')), '51T')

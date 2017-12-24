@@ -225,20 +225,24 @@ class Sample:
 
             setattr(self, key, value)
 
-        if self.read_structure is not None:
-            if self.read_structure.is_single_indexed and self.index is None:
-                raise ValueError(
-                    f'If a single-indexed read structure is defined then a '
-                    f'sample ``index`` must be defined also: {self}')
-
-            if (
-                self.read_structure.is_dual_indexed and
-                (self.index is None or self.index2 is None)
-            ):
-                raise ValueError(
-                    f'If a dual-indexed read structure is defined then '
-                    f'sample ``index`` and sample ``index2`` must be defined '
-                    f'also: {self}')
+        if (
+            self.read_structure is not None and
+            self.read_structure.is_single_indexed and
+            self.index is None
+        ):
+            raise ValueError(
+                f'If a single-indexed read structure is defined then a '
+                f'sample ``index`` must be defined also: {self}')
+        elif (
+            self.read_structure is not None and
+            self.read_structure.is_dual_indexed and
+            self.index is None and
+            self.index2 is None
+        ):
+            raise ValueError(
+                f'If a dual-indexed read structure is defined then '
+                f'sample ``index`` and sample ``index2`` must be defined '
+                f'also: {self}')
 
     def keys(self):
         """Return all public attributes to this ``Sample``."""
@@ -481,8 +485,10 @@ class SampleSheet:
                 f'samples: {self}')
 
         header = ['barcode_sequence_1']
+
         if self.read_structure.is_dual_indexed:
             header.append('barcode_sequence_2')
+
         header.append(['barcode_name', 'library_name'])
 
         for lane in lanes:

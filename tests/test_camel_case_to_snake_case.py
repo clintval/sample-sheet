@@ -9,13 +9,13 @@ class TestCamelCaseToSnakeCase:
     """Unit tests for ``camel_case_to_snake_case()``"""
 
     def test_simple_conversion(self):
-        """Tests direct conversion from valid camelCase to snake_case"""
+        """Test direct conversion from valid camelCase to snake_case"""
         eq_(to_snake_case('camelCase'), 'camel_case')
 
     def test_with_multiple_caps(self):
-        """Tests strings with multiple capitals in a row"""
+        """Test strings with multiple capitals in a row"""
         eq_(to_snake_case('getHTTPResponseCode'), 'get_http_response_code')
 
     def test_with_multiple_caps_and_numbers(self):
-        """Tests strings with multiple capitals in a row and numbers"""
+        """Test strings with multiple capitals in a row and numbers"""
         eq_(to_snake_case('get2HTTPResp123Code'), 'get2_http_resp123_code')
