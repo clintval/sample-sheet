@@ -20,6 +20,7 @@ class TestSampleSheet:
         eq_(SampleSheet().__repr__(), 'SampleSheet(None)')
 
     def test_is_single_end(self):
+        """Testing ``single_end`` property of ``SampleSheet``"""
         sample_sheet = SampleSheet()
         sample_sheet.reads = [151]
         assert_true(sample_sheet.is_single_end)
@@ -29,6 +30,7 @@ class TestSampleSheet:
         assert_false(sample_sheet.is_single_end)
 
     def test_is_paired_end(self):
+        """Testing ``paired_end`` property of ``SampleSheet``"""
         sample_sheet = SampleSheet()
         sample_sheet.reads = [151]
         assert_false(sample_sheet.is_paired_end)
@@ -38,6 +40,7 @@ class TestSampleSheet:
         assert_true(sample_sheet.is_paired_end)
 
     def test_add_sample(self):
+        """Tests adding a single sample to a sample sheet"""
         sample = Sample({'sample_id': 49})
         sample_sheet = SampleSheet()
 
@@ -95,6 +98,7 @@ class TestSampleSheet:
         assert_raises(ValueError, sample_sheet.add_sample, sample2)
 
     def test_experiment_design_plain_text(self):
+        """Tests ``experimental_design()`` plain text output"""
         mappable = {
             'sample_id': 493,
             'sample_name': '10x-FA',

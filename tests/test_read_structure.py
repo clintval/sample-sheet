@@ -69,6 +69,7 @@ class TestReadStructure:
         eq_(read_structure.total_cycles, 318)
 
     def test_paired_end_dual_index_umi_skips_cycles(self):
+        """Tests the cycles of a paired-end dual-indexed umi skip structure"""
         structure = '8M1S142T8B8B8M1S142T'
         read_structure = ReadStructure(structure)
         eq_(read_structure.index_cycles, 16)
