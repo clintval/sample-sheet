@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+import csv
+import contextlib
+import hashlib
+import os
+import shutil
+import sys
+import tempfile
+
+import click
+
+
+@contextlib.contextmanager
+def open_or_stdout(filename):
+    if filename.strip() != '-':
+        with open(filename, 'w') as f:
+            yield f
+    else:
+        yield sys.stdout
+
+
+@click.command(context_settings=dict(help_option_names=['-h', '--help']))
+@click.argument('path')
+@click.option('--stdout/--in-place', default=True)
+def csv_whitespace_strip(path, stdout):
+    """Strip whitespace around fields in a comma-seperated file."""
+    if stdout:
+        out_path = '-'
+    else:
+        out_path = os.path.join(
+            tempfile.gettempdir(),
+            hashlib.md5(path.encode('utf-8')).hexdigest())
+
+    with open(path) as infile, open_or_stdout(out_path) as outfile:
+        for row in csv.reader(infile):
+            outfile.write(','.join([_.strip() for _ in row]) + '\n')
+
+    if not stdout:
+        shutil.copy2(out_path, path)
+
+
+if __name__ == '__main__':
+    csv_whitespace_strip()

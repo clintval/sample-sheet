@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+nosetests \
+  -v \
+  --progressive-with-bar \
+  --with-coverage \
+  --cover-package=sample_sheet \
+  --with-progressive $(basename "${0}/tests") \
+  "${@}"
