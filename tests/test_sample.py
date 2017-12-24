@@ -46,7 +46,7 @@ class TestSample:
             {'index', 'read_structure', 'sample_id', 'sample_name'})
 
     def test_read_structure_with_single_index(self):
-        """Test that ``index`` is present with  asingle-indexed read
+        """Test that ``index`` is present with  a single-indexed read
         structure.
 
         """
