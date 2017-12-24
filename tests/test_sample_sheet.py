@@ -51,9 +51,22 @@ class TestSampleSheet:
         eq_(len(sample_sheet.samples), 1)
         eq_(sample_sheet.samples[0], sample)
 
+    def test_add_sample_with_index(self):
+        """Test that the SampleSheet sets a sample with attribute ``index``"""
+        sample = Sample({'index': 'ACGTTNAT'})
+        sample_sheet = SampleSheet()
+
+        assert_false(sample_sheet.samples_have_index)
+        assert_false(sample_sheet.samples_have_index2)
+
+        sample_sheet.add_sample(sample)
+
+        assert_true(sample_sheet.samples_have_index)
+        assert_false(sample_sheet.samples_have_index2)
+
     def test_add_sample_same_twice(self):
-        """Test ``add_sample()`` to raise an exception when two samples having
-        the same ``sample_id`` and ``library_id`` are added.
+        """Test ``add_sample()`` when two samples having the same ``sample_id``
+        and ``library_id`` are added.
 
         """
         sample = Sample()
@@ -70,9 +83,8 @@ class TestSampleSheet:
         assert_raises(ValueError, sample_sheet.add_sample, sample2)
 
     def test_add_sample_different_pairing(self):
-        """Test ``add_sample()`` to raise an execption if ``reads`` have been
-        specified in the sample sheet which indicate if the sample should be
-        paired or not.
+        """Test ``add_sample()`` when ``reads`` have been specified in the
+        sample sheet which indicate if the sample should be paired or not.
 
         """
         sample = Sample({'sample_id': 23, 'read_structure': '151T'})
@@ -86,12 +98,36 @@ class TestSampleSheet:
         assert_raises(ValueError, sample_sheet.add_sample, sample)
 
     def test_add_sample_different_read_structure(self):
-        """Test ``add_sample()`` to raise an exception when two samples having
-        different ``read_structure`` attributes are added.
+        """Test ``add_sample()`` when two samples having different
+        ``read_structure`` attributes are added.
 
         """
         sample1 = Sample({'sample_id': 49, 'read_structure': '115T'})
         sample2 = Sample({'sample_id': 23, 'read_structure': '112T'})
+        sample_sheet = SampleSheet()
+        sample_sheet.add_sample(sample1)
+
+        assert_raises(ValueError, sample_sheet.add_sample, sample2)
+
+    def test_add_sample_different_with_missing_index(self):
+        """Test ``add_sample()`` to raise an exception when two samples having
+        different ``read_structure`` attributes are added.
+
+        """
+        sample1 = Sample({'sample_id': 49, 'index': 'ACGTAC'})
+        sample2 = Sample({'sample_id': 23})
+        sample_sheet = SampleSheet()
+        sample_sheet.add_sample(sample1)
+
+        assert_raises(ValueError, sample_sheet.add_sample, sample2)
+
+    def test_add_sample_different_combinations_index_set(self):
+        """Test ``add_sample()`` to raise an exception when two samples having
+        different ``read_structure`` attributes are added.
+
+        """
+        sample1 = Sample({'sample_id': 49, 'index2': 'ACGTAC'})
+        sample2 = Sample({'sample_id': 23, 'index1': 'ACGGTN'})
         sample_sheet = SampleSheet()
         sample_sheet.add_sample(sample1)
 

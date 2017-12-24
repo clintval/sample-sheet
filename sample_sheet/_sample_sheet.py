@@ -21,31 +21,6 @@ __all__ = [
     'SampleSheet',
     'camel_case_to_snake_case']
 
-DEFAULT_SAMPLE_KEYS = [
-    'Sample_ID',
-    'Sample_Name',
-    'Library_ID',
-    'Sample_Project',
-    'Description',
-    'Sample_Name',
-    'I7_Index_ID',
-    'index',
-    'I5_Index_ID',
-    'index2']
-
-SAMPLE_IDENTIFIERS = [
-    'Sample_ID',
-    'Sample_Name',
-    'Library_ID',
-    'I7_Index_ID',
-    'index',
-    'I5_Index_ID',
-    'index2']
-
-SAMPLE_DESCRIPTIONS = [
-    'Sample_ID',
-    'Description']
-
 
 class ReadStructure:
     """ Information regarding the order and number of cycles in a sequence of
@@ -110,6 +85,11 @@ class ReadStructure:
         return len(self._template_pattern.findall(self.structure)) == 2
 
     @property
+    def has_indexes(self):
+        """Return if this read structure has any index tokens."""
+        return len(self._index_pattern.findall(self.structure)) > 0
+
+    @property
     def has_skips(self):
         """Return if this read structure has any skip tokens."""
         return len(self._skip_pattern.findall(self.structure)) > 0
@@ -152,6 +132,10 @@ class ReadStructure:
     def tokens(self):
         """Return a list of all tokens in the read structure."""
         return self._token_pattern.findall(self.structure)
+
+    def copy(self):
+        """Returns a shallow copy of this read structure."""
+        return ReadStructure(self.structure)
 
     def __eq__(self, other):
         """Read structures are equal if their string repr are equal."""
@@ -320,13 +304,15 @@ class SampleSheet:
                 if installed.
 
         """
-        self.path = path
-        self.read_structure = None
-
-        self.header = Header()
-        self.settings = Settings()
-        self.reads = []
         self._samples = []
+
+        self.path = path
+        self.reads = []
+        self.read_structure = None
+        self.samples_have_index = False
+        self.samples_have_index2 = False
+
+        self.header, self.settings = Header(), Settings()
 
         if self.path:
             self._parse(self.path)
@@ -422,32 +408,56 @@ class SampleSheet:
             A sample to be added.
 
         """
+        if len(self.samples) == 0:
+            # Set whether the samples will have ``index ``or ``index2``.
+            self.samples_have_index = sample.index is not None
+            self.samples_have_index2 = sample.index2 is not None
+
         if (
             len(self.samples) == 0 and
             sample.read_structure is not None and
             self.read_structure is None
         ):
-            read_structure = sample.read_structure
+            # If this is the first sample added to the sample sheet then
+            # assume the ``SampleSheet.read_structure`` inherits the
+            # ``sample.read_structure`` only if ``SampleSheet.read_structure``
+            # has not already been defined. If ``SampleSheet.reads`` has been
+            # defined then validate the new read_structure against it.
             if (
-                self.is_paired_end and not read_structure.is_paired_end or
-                self.is_single_end and not read_structure.is_single_end
+                self.is_paired_end and not sample.read_structure.is_paired_end or  # noqa
+                self.is_single_end and not sample.read_structure.is_single_end
             ):
                 raise ValueError(
                     f'Sample sheet pairing has been set with '
                     f'Reads:"{self.reads}" and is not compatible with sample '
-                    f'read structure: {read_structure}')
-            self.read_structure = read_structure
+                    f'read structure: {sample.read_structure}')
 
+            # Make a copy of this samples read_structure for the sample sheet.
+            self.read_structure = sample.read_structure.copy()
+
+        # Validate this sample against the ``SampleSheet.read_structure``
+        # attribute, which can be None, to ensure they are the same.
         if self.read_structure != sample.read_structure:
             raise ValueError(
                 f'Sample read structure ({sample.read_structure}) different '
                 f'than read structure in samplesheet ({self.read_structure}).')
 
+        # Compare this sample against all those already defined to ensure none
+        # have equal ``sample_id`` or ``library_id`` attributes. Also make sure
+        # that all samples have attributes ``index``, ``index2`` or both.
         for other in self.samples:
             if sample == other:
                 raise ValueError(
                     f'Cannot add two samples with the same ``sample_id`` and '
                     f'``library_id``: sample - {sample}, other - {other}')
+            if sample.index is None and self.samples_have_index:
+                raise ValueError(
+                    f'Cannot add a sample without attribute ``index`` if a '
+                    f'previous sample has ``index`` set: {sample})')
+            if sample.index2 is None and self.samples_have_index2:
+                raise ValueError(
+                    f'Cannot add a sample without attribute ``index2`` if a '
+                    f'previous sample has ``index2`` set: {sample})')
 
         self._samples.append(sample)
 
@@ -470,52 +480,61 @@ class SampleSheet:
         table = [(getattr(s, h, '') for h in header) for s in self.samples]
         markdown = tabulate(table, headers=header, tablefmt='pipe')
 
-        # TODO: Write tests for the IPython render.
         try:
+            # The presence of this global name indicates we are in an
+            # IPython interpreter and are safe to render Markdown.
             __IPYTHON__  # noqa
             from IPython.display import Markdown
             return Markdown(markdown)
         except (ImportError, NameError):
             return markdown
 
-    def to_basecalling_params(self, outfile_prefix, lanes):
-        if not self.read_structure:
-            raise ValueError(
-                f'Sample sheet has no read structure attribute, one must add'
-                f'samples: {self}')
+    def to_basecalling_params(self, path_prefix, lanes):
+        """Used to generate files needed by picard ExtractIlluminaBarcodes.
 
-        header = ['barcode_sequence_1']
+        The output files are tab-delimited and have information regarding the
+        barcode sequences, barcode names, and, optionally, the library name.
+        Barcodes must be unique and all the same length.
 
-        if self.read_structure.is_dual_indexed:
-            header.append('barcode_sequence_2')
+        TODO: Validate barcodes are all same length.
+        TODO: Refactor and document.
+        TODO: Provide tests.
 
-        header.append(['barcode_name', 'library_name'])
+        """
+        if not isinstance(lanes, (list, tuple)):
+            raise ValueError(f'Lanes must be a list or tuple: {lanes}')
+        if self.samples_have_index is None:
+            raise ValueError(f'Samples must have at least ``index``')
+
+        header = ['barcode_sequence_1', 'barcode_name', 'library_name']
+        if self.samples_have_index2:
+            header.insert(1, 'barcode_sequence_2')
 
         for lane in lanes:
-            for sample in self.samples:
-                barcode_name = sample.index + sample.index2 or ''
-                library_name = sample.library_id or ''
-                barcode_sequence_1 = sample.index
-                barcode_sequence_2 = sample.index or ''
+            outfile = Path(path_prefix) / 'barcode_params.{}.txt'.format(lane)
 
-
-            if self.is_single_indexed:
-                def params(s):
-                    return s.index, s.index, s.Library_ID
-            else:
-                def params(s):
-                    return s.index, s.index2, s.index + s.index2, s.Library_ID
-                header.insert(1, 'barcode_sequence_2')
-
-            table = [header, *[params(sample) for sample in self.samples]]
-
-            outfile = Path(outdir) / 'barcode_params.{}.txt'.format(lane)
-
-            with open(outfile.expanduser().resolve(), 'w') as handle:
+            with open(str(outfile.expanduser().resolve()), 'w') as handle:
                 writer = csv.writer(handle, delimiter='\t')
-                writer.writerows(table)
+                writer.writerow(header)
 
-    def write_library_params(self, outdir, bam_out_prefix, lanes=4):
+                for sample in self.samples:
+                    barcode_name = sample.index + (sample.index2 or '')
+                    library_name = sample.library_id or ''
+                    barcode_sequence_1 = sample.index
+
+                    line = [barcode_sequence_1, barcode_name, library_name]
+                    if self.samples_have_index2:
+                        barcode_name = sample.index
+                        line.insert(1, sample.index2)
+
+                    writer.writerow(line)
+
+    def _write_library_params(self, outdir, bam_out_prefix, lanes=4):
+        """
+        TODO: Refactor and document.
+        TODO: Provide tests.
+        TODO: Make public.
+        """
         header = ['BARCODE_1', 'OUTPUT', 'SAMPLE_ALIAS', 'LIBRARY_NAME', 'DS']
 
         if not self.is_single_indexed:
@@ -562,20 +581,20 @@ class SampleSheet:
                 writer.writerow(line)
 
     def __len__(self):
-        """Return the number of samples on this ``SampleSheet``"""
+        """Return the number of samples on this ``SampleSheet``."""
         return len(self.samples)
 
     def __iter__(self):
-        """Iterating over a ``SampleSheet`` will emit it's samples"""
+        """Iterating over a ``SampleSheet`` will emit it's samples."""
         self._iter = iter(self.samples)
         return self._iter
 
     def __next__(self):
-        """If an iterator has been defined, get the next item"""
+        """If an iterator has been defined, get the next item."""
         return next(self._iter)
 
     def __repr__(self):
-        """Show the constructor command used to initialize this object"""
+        """Show the constructor command used to initialize this object."""
         path = f'"{self.path}"' if self.path else 'None'
         return f'{self.__class__.__name__}({path})'
 
@@ -595,6 +614,23 @@ class SampleSheet:
         return self.__unicode__() if isatty else self.__repr__()
 
     def __unicode__(self):
+        """
+        TODO: Refactor and document.
+        TODO: Provide tests.
+        """
+        SAMPLE_IDENTIFIERS = [
+            'Sample_ID',
+            'Sample_Name',
+            'Library_ID',
+            'I7_Index_ID',
+            'index',
+            'I5_Index_ID',
+            'index2']
+
+        SAMPLE_DESCRIPTIONS = [
+            'Sample_ID',
+            'Description']
+
         """Return summary unicode tables of this sample sheet."""
         header = SingleTable([], 'Header')
         header.inner_heading_row_border = False
@@ -629,6 +665,20 @@ class SampleSheet:
 
 
 def camel_case_to_snake_case(string):
+    """Convert a string in camelCase format into snake_case.
+
+    Supports multiple capital letters in a row, numerals, and any amount of
+    whitespace.
+
+    Examples
+    --------
+    >>> ...
+
+    Notes
+    -----
+        TODO: Document.
+        TODO: Provide doc examples.
+    """
     grapheme_pattern = re.compile('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))')
     whitespace_pattern = re.compile('\s')
     name = whitespace_pattern.sub('', grapheme_pattern.sub(r'_\1', string))

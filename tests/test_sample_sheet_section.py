@@ -20,7 +20,7 @@ class TestHeader:
     """Unit Test for ``Header``"""
 
     def test_repr(self):
-        """Tests ``__repr__()``"""
+        """Test ``__repr__()``"""
         eq_(Header().__repr__(), 'Header')
 
 

@@ -1,4 +1,5 @@
 from nose.tools import assert_false
+from nose.tools import assert_not_equal
 from nose.tools import assert_raises
 from nose.tools import assert_true
 from nose.tools import eq_
@@ -23,6 +24,7 @@ class TestReadStructure:
         assert_false(read_structure.is_dual_indexed)
         assert_true(read_structure.is_single_end)
         assert_false(read_structure.is_paired_end)
+        assert_false(read_structure.has_indexes)
         assert_false(read_structure.has_skips)
         assert_false(read_structure.has_umi)
 
@@ -44,6 +46,7 @@ class TestReadStructure:
         assert_false(read_structure.is_dual_indexed)
         assert_true(read_structure.is_single_end)
         assert_false(read_structure.is_paired_end)
+        assert_true(read_structure.has_indexes)
         assert_false(read_structure.has_skips)
         assert_true(read_structure.has_umi)
 
@@ -55,6 +58,7 @@ class TestReadStructure:
         assert_true(read_structure.is_dual_indexed)
         assert_false(read_structure.is_single_end)
         assert_true(read_structure.is_paired_end)
+        assert_true(read_structure.has_indexes)
         assert_false(read_structure.has_skips)
         assert_true(read_structure.has_umi)
 
@@ -84,6 +88,12 @@ class TestReadStructure:
         read_structure = ReadStructure(structure)
         eq_(read_structure.tokens,
             ['8M', '1S', '142T', '8B', '8B', '8M', '1S', '142T'])
+
+    def test_copy(self):
+        """Tests a shallow copy"""
+        read_structure1 = ReadStructure('115T')
+        read_structure2 = read_structure1.copy()
+        assert_not_equal(id(read_structure1), id(read_structure2))
 
     def test_equal(self):
         """Test ``ReadStructure.__eq__()``"""
