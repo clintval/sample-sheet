@@ -619,17 +619,17 @@ class SampleSheet:
         TODO: Provide tests.
         """
         SAMPLE_IDENTIFIERS = [
-            'Sample_ID',
-            'Sample_Name',
-            'Library_ID',
-            'I7_Index_ID',
+            'sample_id',
+            'sample_name',
+            'library_id',
+            'i7_index_id',
             'index',
-            'I5_Index_ID',
+            'i5_index_id',
             'index2']
 
         SAMPLE_DESCRIPTIONS = [
-            'Sample_ID',
-            'Description']
+            'sample_id',
+            'description']
 
         """Return summary unicode tables of this sample sheet."""
         header = SingleTable([], 'Header')
