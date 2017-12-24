@@ -32,7 +32,15 @@ Until this package is released on PyPi, one can install directly from the `maste
 
 <h2 align="center">Examples</h3>
 
-An example sample sheet can be found at [`tests/resources/paired-end-single-index.csv`](tests/resources/paired-end-single-index.csv). This sample sheet will be used for demonstrating the library.
+A sample sheet can be read from S3, HDFS, WebHDFS, HTTP as well as local (compressed or not).
+
+```python
+>>> from sample_sheet import SampleSheet
+>>> SampleSheet('s3://bucket/prefix/SampleSheet.csv')
+SampleSheet("s3://bucket/prefix/SampleSheet.csv")
+```
+
+An example sample sheet can be found at [`tests/resources/paired-end-single-index.csv`](tests/resources/paired-end-single-index.csv).
 
 ```python
 >>> from sample_sheet import SampleSheet
@@ -54,7 +62,7 @@ True
 '2'
 ```
 
-The samples of the sample sheet can be accessed directly or _via_ iteration:
+The samples can be accessed directly or _via_ iteration:
 
 ```python
 >>> sample_sheet.samples
@@ -71,7 +79,7 @@ The samples of the sample sheet can be accessed directly or _via_ iteration:
 Sample({"index": "GAATCTGA", "sample_id": "1823A", "sample_name": "1823A-tissue"})
 ```
 
-If a column name for read structure can be inferred for the samples then additional functionality is enabled.
+If a column name for read structure can be inferred, then additional functionality is enabled.
 
 ```python
 >>> first_sample, *_ = sample_sheet.samples
