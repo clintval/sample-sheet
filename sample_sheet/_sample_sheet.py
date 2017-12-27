@@ -556,6 +556,7 @@ class SampleSheet:
 
         for lane in lanes:
             outfile = path_prefix / 'library_params.{}.txt'.format(lane)
+
             with open(str(outfile.expanduser().resolve()), 'w') as handle:
                 writer = csv.writer(handle, delimiter='\t')
                 writer.writerow(header)
@@ -565,7 +566,7 @@ class SampleSheet:
                     bam_out = Path(bam_out_prefix) / sub_directory
 
                     filename = (
-                        f'{sample.Sample_Name}'
+                        f'{sample.sample_name}'
                         f'.{sample.index}{sample.index2 or ""}'
                         f'.{lane}.bam')
 
