@@ -9,7 +9,7 @@ setup(
     author='clintval',
     author_email='valentine.clint@gmail.com',
     url='https://github.com/clintval/sample-sheet',
-    download_url='https://github.com/clintval/sample-sheet/archive/0.0.1.tar.gz',  # noqa
+    download_url='https://github.com/clintval/sample-sheet/archive/v0.0.1.tar.gz',  # noqa
     py_modules=['sample_sheet'],
     install_requires=[
         'click',
