@@ -576,7 +576,7 @@ class SampleSheet:
                         sample.library_id or 'a',
                         sample.description or '']
 
-                    if self.is_paired_end:
+                    if self.samples_have_index2:
                         line.insert(1, sample.index2)
 
                     writer.writerow(line)
@@ -587,7 +587,7 @@ class SampleSheet:
 
                 line = ['N', str(u_out), 'unmatched', 'unmatchedunmatched', '']
 
-                if self.is_paired_end:
+                if self.samples_have_index2:
                     line.insert(1, 'N')
 
                 writer.writerow(line)
