@@ -3,13 +3,13 @@ from setuptools import setup
 setup(
     name='sample_sheet',
     packages=['sample_sheet'],
-    version='0.0.1',
+    version='0.0.2',
     description='An Illumina Sample Sheet parsing utility.',
-    long_description=open('README.md').read().strip(),
+    long_description=open('README.rst').read().strip(),
     author='clintval',
     author_email='valentine.clint@gmail.com',
     url='https://github.com/clintval/sample-sheet',
-    download_url='https://github.com/clintval/sample-sheet/archive/v0.0.1.tar.gz',  # noqa
+    download_url='https://github.com/clintval/sample-sheet/archive/v0.0.2.tar.gz',  # noqa
     py_modules=['sample_sheet'],
     install_requires=[
         'click',
@@ -17,7 +17,7 @@ setup(
         'tabulate',
         'terminaltables',
     ],
-    extras_requires={
+    extras_require={
         'test': ['nose', 'nose-progressive', 'coverage'],
     },
     scripts=[
