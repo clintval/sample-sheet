@@ -477,7 +477,7 @@ class SampleSheet:
 
         """
         header = ['sample_id', 'sample_name', 'library_id', 'description']
-        table = [(getattr(s, h, '') for h in header) for s in self.samples]
+        table = [[getattr(s, h, '') for h in header] for s in self._samples]
         markdown = tabulate(table, headers=header, tablefmt='pipe')
 
         try:
@@ -506,12 +506,15 @@ class SampleSheet:
         if self.samples_have_index is None:
             raise ValueError(f'Samples must have at least ``index``')
 
+        path_prefix = Path(path_prefix)
+        path_prefix.mkdir(exist_ok=True, parents=True)
+
         header = ['barcode_sequence_1', 'barcode_name', 'library_name']
         if self.samples_have_index2:
             header.insert(1, 'barcode_sequence_2')
 
         for lane in lanes:
-            outfile = Path(path_prefix) / 'barcode_params.{}.txt'.format(lane)
+            outfile = path_prefix / 'barcode_params.{}.txt'.format(lane)
 
             with open(str(outfile.expanduser().resolve()), 'w') as handle:
                 writer = csv.writer(handle, delimiter='\t')
@@ -529,29 +532,38 @@ class SampleSheet:
 
                     writer.writerow(line)
 
-    def _write_library_params(self, outdir, bam_out_prefix, lanes=4):
+    def to_library_params(self, path_prefix, bam_out_prefix, lanes):
         """
         TODO: Refactor and document.
         TODO: Provide tests.
         TODO: Make public.
         """
-        header = ['BARCODE_1', 'OUTPUT', 'SAMPLE_ALIAS', 'LIBRARY_NAME', 'DS']
+        if not isinstance(lanes, (list, tuple)):
+            raise ValueError(f'Lanes must be a list or tuple: {lanes}')
+        if self.samples_have_index is None:
+            raise ValueError(f'Samples must have at least ``index``')
 
-        if not self.is_single_indexed:
+        path_prefix = Path(path_prefix)
+        path_prefix.mkdir(exist_ok=True, parents=True)
+
+        header = ['BARCODE_1', 'OUTPUT', 'SAMPLE_ALIAS', 'LIBRARY_NAME', 'DS']
+        if self.samples_have_index2:
             header.insert(1, 'BARCODE_2')
 
-        for sample in self.samples:
-            sub_directory = f'{sample.Sample_Name}.{sample.Library_ID}'
-            bam_out = Path(bam_out_prefix) / sub_directory
-            os.makedirs(bam_out.expanduser().resolve(), exist_ok=True)
+        # for sample in self.samples:
 
-        for lane in range(1, lanes + 1):
-            outfile = Path(outdir) / 'library_params.{}.txt'.format(lane)
-            with open(outfile.expanduser().resolve(), 'w') as handle:
+        #     os.makedirs(bam_out.expanduser().resolve(), exist_ok=True)
+
+        for lane in lanes:
+            outfile = path_prefix / 'library_params.{}.txt'.format(lane)
+            with open(str(outfile.expanduser().resolve()), 'w') as handle:
                 writer = csv.writer(handle, delimiter='\t')
                 writer.writerow(header)
 
                 for sample in self.samples:
+                    sub_directory = f'{sample.sample_name}.{sample.library_id or "a"}'
+                    bam_out = Path(bam_out_prefix) / sub_directory
+
                     filename = (
                         f'{sample.Sample_Name}'
                         f'.{sample.index}{sample.index2 or ""}'
@@ -560,11 +572,11 @@ class SampleSheet:
                     line = [
                         sample.index,
                         bam_out.expanduser().resolve() / filename,
-                        sample.Sample_Name,
-                        sample.Library_ID,
-                        sample.Description or '']
+                        sample.sample_name,
+                        sample.library_id or 'a',
+                        sample.description or '']
 
-                    if not self.is_single_indexed:
+                    if self.is_paired_end:
                         line.insert(1, sample.index2)
 
                     writer.writerow(line)
@@ -575,7 +587,7 @@ class SampleSheet:
 
                 line = ['N', str(u_out), 'unmatched', 'unmatchedunmatched', '']
 
-                if not self.is_single_indexed:
+                if self.is_paired_end:
                     line.insert(1, 'N')
 
                 writer.writerow(line)
