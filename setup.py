@@ -9,7 +9,7 @@ setup(
     author='clintval',
     author_email='valentine.clint@gmail.com',
     url='https://github.com/clintval/sample-sheet',
-    download_url='https://github.com/clintval/sample-sheet/archive/0.0.1.tar.gz',  # noqa
+    download_url='https://github.com/clintval/sample-sheet/archive/v0.0.1.tar.gz',  # noqa
     py_modules=['sample_sheet'],
     install_requires=[
         'click',
@@ -28,12 +28,11 @@ setup(
     zip_safe=True,
     keywords='illumina samplesheet sample sheet parser bioinformatics',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
+        'Topic :: Scientific/Engineering :: Bio-Informatics',
         'Programming Language :: Python :: 3.6',
     ]
 )
