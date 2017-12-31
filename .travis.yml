@@ -9,3 +9,5 @@ script:
   - nosetests -v
 notifications:
   email: false
+env:
+  - COLUMNS=80
