@@ -117,47 +117,57 @@ ReadStructure(structure="151T8B151T")
 
 #### [sample-sheet-summary](#sample-sheet-summary)
 
-Prints a unicode table summary of the sample sheet.
-
-> *Note:* currently broken.
-> Output below to give you an idea of what the final result will look like.
+Prints a tabular summary of the sample sheet.
 
 ```bash
 ❯ sample-sheet-summary paired-end-single-index.csv
-┌Header─────────────┬──┐
-│ IEM1FileVersion   │  │
-│ Investigator Name │  │
-│ Experiment Name   │  │
-│ Date              │  │
-│ Workflow          │  │
-│ Application       │  │
-│ Assay             │  │
-│ Description       │  │
-│ Chemistry         │  │
-└───────────────────┴──┘
-┌Settings──────────────────┬──────────┐
-│ CreateFastqForIndexReads │          │
-│ BarcodeMismatches        │          │
-│ Reads                    │ 151, 151 │
-└──────────────────────────┴──────────┘
-┌Identifiers┬──────────────┬────────────┬─────────────┬──────────┬─────────────┬────────┐
-│ sample_id │ sample_name  │ library_id │ i7_index_id │ index    │ i5_index_id │ index2 │
-├───────────┼──────────────┼────────────┼─────────────┼──────────┼─────────────┼────────┤
-│ 1823A     │ 1823A-tissue │ 2017-01-20 │             │ GAATCTGA │             │        │
-│ 1823B     │ 1823B-tissue │ 2017-01-20 │             │ AGCAGGAA │             │        │
-│ 1824A     │ 1824A-tissue │ 2017-01-20 │             │ GAGCTGAA │             │        │
-│ 1825A     │ 1825A-tissue │ 2017-01-20 │             │ AAACATCG │             │        │
-│ 1826A     │ 1826A-tissue │ 2017-01-20 │             │ GAGTTAGC │             │        │
-│ 1826B     │ 1823A-tissue │ 2017-01-17 │             │ CGAACTTA │             │        │
-│ 1829A     │ 1823B-tissue │ 2017-01-17 │             │ GATAGACA │             │        │
-└───────────┴──────────────┴────────────┴─────────────┴──────────┴─────────────┴────────┘
+┌Header─────────────┬─────────────────────────────────┐
+│ iem1_file_version │ 4                               │
+│ investigator_name │ jdoe                            │
+│ experiment_name   │ exp001                          │
+│ date              │ 11/16/2017                      │
+│ workflow          │ SureSelectXT                    │
+│ application       │ NextSeq FASTQ Only              │
+│ assay             │ SureSelectXT                    │
+│ description       │ A description of this flow cell │
+│ chemistry         │ Default                         │
+└───────────────────┴─────────────────────────────────┘
+┌Settings──────────────────────┬──────────┐
+│ create_fastq_for_index_reads │ 1        │
+│ barcode_mismatches           │ 2        │
+│ reads                        │ 151, 151 │
+└──────────────────────────────┴──────────┘
+┌Identifiers┬──────────────┬────────────┬──────────┬────────┐
+│ sample_id │ sample_name  │ library_id │ index    │ index2 │
+├───────────┼──────────────┼────────────┼──────────┼────────┤
+│ 1823A     │ 1823A-tissue │ 2017-01-20 │ GAATCTGA │        │
+│ 1823B     │ 1823B-tissue │ 2017-01-20 │ AGCAGGAA │        │
+│ 1824A     │ 1824A-tissue │ 2017-01-20 │ GAGCTGAA │        │
+│ 1825A     │ 1825A-tissue │ 2017-01-20 │ AAACATCG │        │
+│ 1826A     │ 1826A-tissue │ 2017-01-20 │ GAGTTAGC │        │
+│ 1826B     │ 1823A-tissue │ 2017-01-17 │ CGAACTTA │        │
+│ 1829A     │ 1823B-tissue │ 2017-01-17 │ GATAGACA │        │
+└───────────┴──────────────┴────────────┴──────────┴────────┘
+┌Descriptions──────────────────┐
+│ sample_id │ description      │
+├───────────┼──────────────────┤
+│ 1823A     │ 0.5x treatment   │
+│ 1823B     │ 0.5x treatment   │
+│ 1824A     │ 1.0x treatment   │
+│ 1825A     │ 10.0x treatment  │
+│ 1826A     │ 100.0x treatment │
+│ 1826B     │ 0.5x treatment   │
+│ 1829A     │ 0.5x treatment   │
+└───────────┴──────────────────┘
 ```
 
 <br>
 
 <h3 align="center">Contributing</h3>
 
-Pull requests and issues welcome! To make a development install:
+Pull requests and issues welcome!
+
+To make a development install:
 
 ```bash
 ❯ git clone git@github.com:clintval/sample-sheet.git
@@ -171,10 +181,10 @@ To run the tests:
 Name                            Stmts   Miss  Cover
 ---------------------------------------------------
 sample_sheet/__init__.py            1      0   100%
-sample_sheet/_sample_sheet.py     272     10    96%
+sample_sheet/_sample_sheet.py     280      0   100%
 ---------------------------------------------------
-TOTAL                             273     10    96%
+TOTAL                             281      0   100%
 
-OK!  47 tests, 0 failures, 0 errors in 0.0s
+OK!  58 tests, 0 failures, 0 errors in 0.0s
 ```
 
