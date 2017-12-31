@@ -1,11 +1,22 @@
 from setuptools import setup
 
+
+try:
+    import pypandoc
+    long_description = pypandoc.convert_file('README.md', 'rst')
+    long_description = long_description.replace('\r', '')
+except (ImportError, OSError):
+    import io
+    with io.open('README.md', encoding='utf-8') as f:
+        long_description = f.read()
+
+
 setup(
     name='sample_sheet',
     packages=['sample_sheet'],
     version='0.1.0',
     description='An Illumina Sample Sheet parsing utility.',
-    long_description=open('README.md').read().strip(),
+    long_description=long_description,
     author='clintval',
     author_email='valentine.clint@gmail.com',
     url='https://github.com/clintval/sample-sheet',
