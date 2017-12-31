@@ -5,6 +5,7 @@ from nose.tools import assert_raises
 from nose.tools import assert_true
 from nose.tools import eq_
 
+from itertools import groupby
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
@@ -12,6 +13,39 @@ from unittest import TestCase
 from sample_sheet import *  # Test import of __all__
 
 RESOURCES = Path('./tests/resources').resolve()
+
+VT_100_MAPPING = {
+    '0x71': '─',
+    '0x74': '├',
+    '0x75': '┤',
+    '0x76': '┴',
+    '0x77': '┬',
+    '0x78': '│',
+    '0x6a': '┘',
+    '0x6b': '┐',
+    '0x6c': '┌',
+    '0x6d': '└',
+    '0x6e': '┼',
+}
+
+
+def decode_vt_100(iterable, default_set='(B', alt_set='(0', escape='\x1b'):
+    """Decodes a sequence of VT100 characters.
+    https://stackoverflow.com/a/48046132/3727678
+
+    """
+    for is_escape, group in groupby(iterable, lambda _: _ == escape):
+        if is_escape:
+            continue
+
+        characters = ''.join(group)
+
+        if characters.startswith(default_set):
+            yield characters[len(default_set):]
+
+        elif characters.startswith(alt_set):
+            for character in characters[len(alt_set):]:
+                yield VT_100_MAPPING[hex(ord(character))]
 
 
 class TestSampleSheet(TestCase):
@@ -148,10 +182,7 @@ class TestSampleSheet(TestCase):
         assert_raises(ValueError, sample_sheet.add_sample, sample2)
 
     def test_add_sample_with_missing_index(self):
-        """Test ``add_sample()`` to raise an exception when two samples having
-        different ``read_structure`` attributes are added.
-
-        """
+        """Test ``add_sample()`` when a sample has a missing index."""
         sample1 = Sample({'sample_id': 49, 'index': 'ACGTAC'})
         sample2 = Sample({'sample_id': 23})
         sample_sheet = SampleSheet()
@@ -160,10 +191,7 @@ class TestSampleSheet(TestCase):
         assert_raises(ValueError, sample_sheet.add_sample, sample2)
 
     def test_add_sample_with_different_index_combination(self):
-        """Test ``add_sample()`` to raise an exception when two samples having
-        different ``read_structure`` attributes are added.
-
-        """
+        """Test ``add_sample()`` improper index combinations in samples."""
         sample1 = Sample({'sample_id': 49, 'index2': 'ACGTAC'})
         sample2 = Sample({'sample_id': 23, 'index': 'ACGGTN'})
         sample_sheet = SampleSheet()
@@ -257,7 +285,7 @@ class TestSampleSheet(TestCase):
                 temp_dir, temp_dir, lanes=1)
 
     def test_to_picard_basecalling_params_different_index2_sizes(self):
-        """Test ``to_picard_basecalling_params()`` different index sizes."""
+        """Test ``to_picard_basecalling_params()`` different index2 sizes."""
         with TemporaryDirectory() as temp_dir:
             sample_sheet = SampleSheet()
             sample1 = Sample({'sample_id': 21, 'index2': 'ACGT'})
@@ -355,50 +383,47 @@ class TestSampleSheet(TestCase):
 
     def test_repr_tty(self):
         """Test ``_repr_tty_()``"""
+        self.maxDiff = 3000
         sample_sheet = SampleSheet(RESOURCES / 'paired-end-single-index.csv')
+        source = '\n' + ''.join(decode_vt_100(sample_sheet._repr_tty_()))
+        target = (
+            '\n┌Header─────────────┬─────────────────────────────────┐'
+            '\n│ iem1_file_version │ 4                               │'
+            '\n│ investigator_name │ jdoe                            │'
+            '\n│ experiment_name   │ exp001                          │'
+            '\n│ date              │ 11/16/2017                      │'
+            '\n│ workflow          │ SureSelectXT                    │'
+            '\n│ application       │ NextSeq FASTQ Only              │'
+            '\n│ assay             │ SureSelectXT                    │'
+            '\n│ description       │ A description of this flow cell │'
+            '\n│ chemistry         │ Default                         │'
+            '\n└───────────────────┴─────────────────────────────────┘'
+            '\n┌Settings──────────────────────┬──────────┐'
+            '\n│ create_fastq_for_index_reads │ 1        │'
+            '\n│ barcode_mismatches           │ 2        │'
+            '\n│ reads                        │ 151, 151 │'
+            '\n└──────────────────────────────┴──────────┘'
+            '\n┌Identifiers┬──────────────┬────────────┬──────────┬────────┐'
+            '\n│ sample_id │ sample_name  │ library_id │ index    │ index2 │'
+            '\n├───────────┼──────────────┼────────────┼──────────┼────────┤'
+            '\n│ 1823A     │ 1823A-tissue │ 2017-01-20 │ GAATCTGA │        │'
+            '\n│ 1823B     │ 1823B-tissue │ 2017-01-20 │ AGCAGGAA │        │'
+            '\n│ 1824A     │ 1824A-tissue │ 2017-01-20 │ GAGCTGAA │        │'
+            '\n│ 1825A     │ 1825A-tissue │ 2017-01-20 │ AAACATCG │        │'
+            '\n│ 1826A     │ 1826A-tissue │ 2017-01-20 │ GAGTTAGC │        │'
+            '\n│ 1826B     │ 1823A-tissue │ 2017-01-17 │ CGAACTTA │        │'
+            '\n│ 1829A     │ 1823B-tissue │ 2017-01-17 │ GATAGACA │        │'
+            '\n└───────────┴──────────────┴────────────┴──────────┴────────┘'
+            '\n┌Descriptions──────────────────┐'
+            '\n│ sample_id │ description      │'
+            '\n├───────────┼──────────────────┤'
+            '\n│ 1823A     │ 0.5x treatment   │'
+            '\n│ 1823B     │ 0.5x treatment   │'
+            '\n│ 1824A     │ 1.0x treatment   │'
+            '\n│ 1825A     │ 10.0x treatment  │'
+            '\n│ 1826A     │ 100.0x treatment │'
+            '\n│ 1826B     │ 0.5x treatment   │'
+            '\n│ 1829A     │ 0.5x treatment   │'
+            '\n└───────────┴──────────────────┘')
 
-        # TODO: Figure out how to properly encode the source string in Python3
-        #       https://stackoverflow.com/q/48039871/3727678
-        source = sample_sheet._repr_tty_()
-
-        target = """
-┌Header─────────────┬─────────────────────────────────┐
-│ iem1_file_version │ 4                               │
-│ investigator_name │ jdoe                            │
-│ experiment_name   │ exp001                          │
-│ date              │ 11/16/2017                      │
-│ workflow          │ SureSelectXT                    │
-│ application       │ NextSeq FASTQ Only              │
-│ assay             │ SureSelectXT                    │
-│ description       │ A description of this flow cell │
-│ chemistry         │ Default                         │
-└───────────────────┴─────────────────────────────────┘
-┌Settings──────────────────────┬──────────┐
-│ create_fastq_for_index_reads │ 1        │
-│ barcode_mismatches           │ 2        │
-│ reads                        │ 151, 151 │
-└──────────────────────────────┴──────────┘
-┌Identifiers┬──────────────┬────────────┬──────────┬────────┐
-│ sample_id │ sample_name  │ library_id │ index    │ index2 │
-├───────────┼──────────────┼────────────┼──────────┼────────┤
-│ 1823A     │ 1823A-tissue │ 2017-01-20 │ GAATCTGA │        │
-│ 1823B     │ 1823B-tissue │ 2017-01-20 │ AGCAGGAA │        │
-│ 1824A     │ 1824A-tissue │ 2017-01-20 │ GAGCTGAA │        │
-│ 1825A     │ 1825A-tissue │ 2017-01-20 │ AAACATCG │        │
-│ 1826A     │ 1826A-tissue │ 2017-01-20 │ GAGTTAGC │        │
-│ 1826B     │ 1823A-tissue │ 2017-01-17 │ CGAACTTA │        │
-│ 1829A     │ 1823B-tissue │ 2017-01-17 │ GATAGACA │        │
-└───────────┴──────────────┴────────────┴──────────┴────────┘
-┌Descriptions──────────────────┐
-│ sample_id │ description      │
-├───────────┼──────────────────┤
-│ 1823A     │ 0.5x treatment   │
-│ 1823B     │ 0.5x treatment   │
-│ 1824A     │ 1.0x treatment   │
-│ 1825A     │ 10.0x treatment  │
-│ 1826A     │ 100.0x treatment │
-│ 1826B     │ 0.5x treatment   │
-│ 1829A     │ 0.5x treatment   │
-└───────────┴──────────────────┘
-"""
-        # self.assertMultiLineEqual(encoded, decoded)
+        self.assertMultiLineEqual(source, target)
