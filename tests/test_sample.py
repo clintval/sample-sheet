@@ -5,10 +5,12 @@ from nose.tools import assert_raises
 from nose.tools import assert_set_equal
 from nose.tools import eq_
 
+from unittest import TestCase
+
 from sample_sheet import *  # Test import of __all__
 
 
-class TestSample:
+class TestSample(TestCase):
     """Unit tests for ``Sample``"""
 
     def test_blank_init(self):

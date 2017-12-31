@@ -4,14 +4,11 @@ import os
 import re
 import sys
 
+from contextlib import ExitStack
 from pathlib import Path
 from textwrap import wrap
 
-try:
-    from smart_open import smart_open as open
-except ImportError:
-    raise
-
+from smart_open import smart_open as open
 from tabulate import tabulate
 from terminaltables import SingleTable
 
@@ -20,6 +17,9 @@ __all__ = [
     'Sample',
     'SampleSheet',
     'camel_case_to_snake_case']
+
+# The minimum column with of a detected TTY for wrapping text in CLI columns.
+MIN_WIDTH = 10
 
 
 class ReadStructure:
@@ -56,7 +56,7 @@ class ReadStructure:
 
     def __init__(self, structure):
         if not bool(self._valid_pattern.match(structure)):
-            raise ValueError('Not a valid structure: {}'.format(structure))
+            raise ValueError('Not a valid structure: "{}"'.format(structure))
         self.structure = structure
 
     @property
@@ -254,6 +254,7 @@ class Sample:
 class SampleSheetSection:
     def __init__(self):
         self.keys = []
+        self._key_map = {}
 
     def __getattr__(self, attr):
         """Return None if an attribute is undefined."""
@@ -274,43 +275,32 @@ class Settings(SampleSheetSection):
 class SampleSheet:
     """A representation of an Illumina sample sheet.
 
-    A sample sheet document almost conform to the .ini standards but does not,
+    A sample sheet document almost conform to the .ini standards, but does not,
     so a custom parser is needed. Sample sheets are stored in plain text with
     comma-seperated values and string quoting around any field which contains a
-    comma. The sample sheet is composed of four sections, maked by a header.
+    comma. The sample sheet is composed of four sections, marked by a header.
 
         [Header]   : .ini convention
         [Settings] : .ini convention
         [Reads]    : .ini convention as a vertical array of items
         [Data]     : table with header
 
-
-    Notes
-    -----
-    1. Write better docstrings
-    2. Cleanup and test parser
-    3. Add tests and test sample sheets
-    4. Add support for printing Picard files for libraries and barcodes
+    Parameters
+    ----------
+    path : str or pathlib.Path, optional
+        Any path supported by ``pathlib.Path`` and ``smart_open``.
 
     """
 
     def __init__(self, path=None):
-        """Constructs a ``SampleSheet`` from a file object.
-
-        Parameters
-        ----------
-        path : str or pathlib.Path, optional
-            Path to filesystem file or any path supported by ``smart_open``
-                if installed.
-
-        """
         self._samples = []
 
         self.path = path
         self.reads = []
+
         self.read_structure = None
-        self.samples_have_index = False
-        self.samples_have_index2 = False
+        self.samples_have_index = None
+        self.samples_have_index2 = None
 
         self.header, self.settings = Header(), Settings()
 
@@ -318,7 +308,7 @@ class SampleSheet:
             self._parse(self.path)
 
     @staticmethod
-    def _path_to_csv_reader(path):
+    def _make_csv_reader(path):
         """Return a ``csv.reader`` for a filepath.
 
         This helper method is required since ``smart_open.smart_open`` cannot
@@ -328,8 +318,7 @@ class SampleSheet:
         Parameters
         ----------
         path : str or pathlib.Path
-            Path to filesystem file or any path supported by ``smart_open``
-                if installed.
+            Any path supported by ``pathlib.Path`` and ``smart_open``.
 
         Returns
         -------
@@ -344,11 +333,15 @@ class SampleSheet:
     @property
     def is_paired_end(self):
         """Return if the samples are paired-end."""
+        if len(self.reads) == 0:
+            return None
         return len(self.reads) == 2
 
     @property
     def is_single_end(self):
         """Return if the samples are single-end."""
+        if len(self.reads) == 0:
+            return None
         return len(self.reads) == 1
 
     @property
@@ -357,10 +350,10 @@ class SampleSheet:
         return self._samples
 
     def _parse(self, path):
-        sample_header = None
+        section = sample_header = None
         header_pattern = re.compile(r'\[(.*)\]')
 
-        for line in self._path_to_csv_reader(path):
+        for line in self._make_csv_reader(path):
             if all(field.strip() == '' for field in line):
                 continue   # Skip all blank lines
 
@@ -368,18 +361,21 @@ class SampleSheet:
             if section_match:
                 section, *_ = section_match.groups()
                 section = section.lower()
-                continue
 
-            if section in ('header', 'settings'):
+            elif section in ('header', 'settings'):
                 key, value, *_ = line
-                attribute = getattr(self, section)
-                attribute.keys.append(key)
-                setattr(attribute, camel_case_to_snake_case(key), value)
-                continue
+                formatted_key = camel_case_to_snake_case(key)
+
+                # ``object_attribute`` is either  self.header or self.settings.
+                object_attribute = getattr(self, section)
+                object_attribute.keys.append(formatted_key)
+                object_attribute._key_map[key] = formatted_key
+                setattr(object_attribute, formatted_key, value)
+
             elif section == 'reads':
                 read_cycle, *_ = line
                 self.reads.append(int(read_cycle))
-                continue
+
             elif section == 'data':
                 if sample_header is None:
                     sample_header = line
@@ -391,6 +387,8 @@ class SampleSheet:
                         '{}'.format(line))
 
                 self.add_sample(Sample(dict(zip(sample_header, line))))
+            else:
+                pass
 
     def add_sample(self, sample):
         """Validate and add a ``Sample`` to this ``SampleSheet``.
@@ -399,13 +397,18 @@ class SampleSheet:
         all have the sample ``read_structure`` attribute, if supplied. The
         ``SampleSheet`` will inherit the same ``read_structure`` attribute.
 
-        A ValueError is issued if a sample with the sample ``sample_id`` and
-        ``sample_library`` are added.
+        Samples cannot be added if the following criteria is met:
+            - ``sample_id`` and ``sample_library`` combination exists
+            - ``index`` and/or ``index2`` combination exists
+            - Samplesheet.reads and Sample.read_structure are incompatible
+            - Sample does not have ``index`` defined but others do
+            - Sample does not have ``index2`` defined but others do
+            - If defined, sample ``read_structure`` is different than others
 
         Parameters
         ----------
-        sample : sample_sheet.Sample
-            A sample to be added.
+        sample : Sample
+            Sample to add to this sample sheet.
 
         """
         if len(self.samples) == 0:
@@ -443,8 +446,9 @@ class SampleSheet:
                 f'than read structure in samplesheet ({self.read_structure}).')
 
         # Compare this sample against all those already defined to ensure none
-        # have equal ``sample_id`` or ``library_id`` attributes. Also make sure
-        # that all samples have attributes ``index``, ``index2`` or both.
+        # have equal ``sample_id`` or ``library_id`` attributes. Ensure that
+        # all samples have attributes ``index``, ``index2`` or both. Check to
+        # make sure this sample's index combination has not been added before.
         for other in self.samples:
             if sample == other:
                 raise ValueError(
@@ -458,6 +462,16 @@ class SampleSheet:
                 raise ValueError(
                     f'Cannot add a sample without attribute ``index2`` if a '
                     f'previous sample has ``index2`` set: {sample})')
+            if (
+                (self.samples_have_index and not self.samples_have_index2 and
+                 sample.index == other.index) or
+                (self.samples_have_index and self.samples_have_index2 and
+                 sample.index == other.index and
+                 sample.index2 == sample.index2)
+            ):
+                raise ValueError(
+                    f'Sample index combination for {sample} has already been '
+                    f'added: {other}')
 
         self._samples.append(sample)
 
@@ -466,9 +480,8 @@ class SampleSheet:
         """Return a markdown summary of the samples on this sample sheet.
 
         This property supports displaying rendered markdown only when running
-        within an IPython interpreter. This is achieved by checking the
-        existance of the variable ``__IPYTHON__``. If we are not running in an
-        IPython interpreter then print out a nicely formatted ASCII table.
+        within an IPython interpreter. If we are not running in an IPython
+        interpreter, then print out a nicely formatted ASCII table.
 
         Returns
         -------
@@ -476,109 +489,154 @@ class SampleSheet:
             Returns a rendered Markdown when not displayed in IPython.
 
         """
-        header = ['sample_id', 'sample_name', 'library_id', 'description']
-        table = [(getattr(s, h, '') for h in header) for s in self.samples]
-        markdown = tabulate(table, headers=header, tablefmt='pipe')
+        if len(self.samples) == 0:
+            raise ValueError('No samples in sample sheet')
 
-        try:
-            # The presence of this global name indicates we are in an
-            # IPython interpreter and are safe to render Markdown.
-            __IPYTHON__  # noqa
+        header = ['sample_id', 'sample_name', 'library_id', 'description']
+        table = [[getattr(s, h, '') for h in header] for s in self._samples]
+        markdown = tabulate(table, headers=header, tablefmt='pipe')
+        if is_ipython_interpreter():
             from IPython.display import Markdown
             return Markdown(markdown)
-        except (ImportError, NameError):
+        else:
             return markdown
 
-    def to_basecalling_params(self, path_prefix, lanes):
-        """Used to generate files needed by picard ExtractIlluminaBarcodes.
+    def to_picard_basecalling_params(self, directory, bam_prefix, lanes):
+        """Writes sample and library information to a set of files for a given
+        set of lanes.
 
-        The output files are tab-delimited and have information regarding the
-        barcode sequences, barcode names, and, optionally, the library name.
-        Barcodes must be unique and all the same length.
+        BARCODE PARAMETERS FILES: Store information regarding the sample index
+        sequences, sample index names, and, optionally, the library name. These
+        files are used by Picard's `CollectIlluminaBasecallingMetrics` and
+        Picard's `ExtractIlluminaBarcodes`. The output tab-seperated files are
+        formatted as:
 
-        TODO: Validate barcodes are all same length.
-        TODO: Refactor and document.
-        TODO: Provide tests.
+            <directory>/barcode_params.<lane>.txt
+
+        LIBRARY PARAMETERS FILES: Store information regarding the sample index
+        sequences, sample index names, and optionally sample library and
+        descriptions. A path to the resulting demultiplexed BAM file is also
+        stored which is used by Picard's `IlluminaBasecallsToSam`. The output
+        tab-seperated files are formatted as:
+
+            <directory>/library_params.<lane>.txt
+
+        The format of the BAM file output paths in the library parameter files
+        are formatted as:
+
+            <bam_prefix>/<sample_name>.<sample_library>/
+                <sample_name>.<index><index2>.<lane>.bam
+
+        Two files will be written to `directory` for all `lanes` specified. If
+        the path to `directory` does not exist, it will be created.
+
+        Parameters
+        ----------
+        directory : str or pathlib.Path
+            File path to the directory to write the parameter files.
+        bam_prefix: str or pathlib.Path
+            Where the demultiplexed BAMs should be written.
+        lanes : int, or iterable of int
+            The lanes to write basecalling parameters for.
 
         """
-        if not isinstance(lanes, (list, tuple)):
-            raise ValueError(f'Lanes must be a list or tuple: {lanes}')
-        if self.samples_have_index is None:
-            raise ValueError(f'Samples must have at least ``index``')
+        if len(self.samples) == 0:
+            raise ValueError('No samples in sample sheet')
+        if not (
+            isinstance(lanes, int) or
+            isinstance(lanes, (list, tuple)) and
+            len(lanes) > 0 and
+            all(isinstance(lane, int) for lane in lanes)
+        ):
+            raise ValueError(f'Lanes must be an int or list of ints: {lanes}')
+        if len(set(len(sample.index or '') for sample in self.samples)) != 1:
+            raise ValueError('I7 indexes have differing lengths.')
+        if len(set(len(sample.index2 or '') for sample in self.samples)) != 1:
+            raise ValueError('I5 indexes have differing lengths.')
+        for attr in ('sample_name', 'library_id', 'index'):
+            if any(getattr(sample, attr) is None for sample in self.samples):
+                raise ValueError(
+                    'Samples must have at least `sample_name`, '
+                    '`sample_library`, and `index` attributes')
 
-        header = ['barcode_sequence_1', 'barcode_name', 'library_name']
-        if self.samples_have_index2:
-            header.insert(1, 'barcode_sequence_2')
+        # Make lanes iterable if only an int was provided.
+        lanes = [lanes] if isinstance(lanes, int) else lanes
+
+        # Resolve path to basecalling parameter files.
+        prefix = Path(directory).expanduser().resolve()
+        prefix.mkdir(exist_ok=True, parents=True)
+
+        # Promote bam_prefix to Path object.
+        bam_prefix = Path(bam_prefix).expanduser().resolve()
+
+        # Both headers are one column larger if an ``index2`` attribute is
+        # present on all samples. Use list splatting to unpack the options.
+        barcode_header = [
+            *(['barcode_sequence_1'] if not self.samples_have_index2 else
+              ['barcode_sequence_1', 'barcode_sequence_2']),
+            'barcode_name', 'library_name']
+        # TODO: Remove description if none is provided on all samples.
+        library_header = [
+            *(['BARCODE_1'] if not self.samples_have_index2 else
+              ['BARCODE_1', 'BARCODE_2']),
+            'OUTPUT', 'SAMPLE_ALIAS', 'LIBRARY_NAME', 'DS']
 
         for lane in lanes:
-            outfile = Path(path_prefix) / 'barcode_params.{}.txt'.format(lane)
+            barcode_out = prefix / f'barcode_params.{lane}.txt'
+            library_out = prefix / f'library_params.{lane}.txt'
 
-            with open(str(outfile.expanduser().resolve()), 'w') as handle:
-                writer = csv.writer(handle, delimiter='\t')
-                writer.writerow(header)
+            # Enter into a writing context for both library and barcode params.
+            with ExitStack() as stack:
+                barcode_writer = csv.writer(
+                    stack.enter_context(barcode_out.open('w')), delimiter='\t')
+                library_writer = csv.writer(
+                    stack.enter_context(library_out.open('w')), delimiter='\t')
+
+                barcode_writer.writerow(barcode_header)
+                library_writer.writerow(library_header)
 
                 for sample in self.samples:
+                    # The long name of a sample is a combination of the sample
+                    # ID and the sample library.
+                    long_name = '.'.join([
+                        sample.sample_name, sample.library_id])
+
+                    # The barcode name is all sample indexes concatenated.
                     barcode_name = sample.index + (sample.index2 or '')
                     library_name = sample.library_id or ''
-                    barcode_sequence_1 = sample.index
 
-                    line = [barcode_sequence_1, barcode_name, library_name]
-                    if self.samples_have_index2:
-                        barcode_name = sample.index
-                        line.insert(1, sample.index2)
+                    # Assemble the path to the future BAM file.
+                    bam_file = (
+                        bam_prefix / long_name /
+                        f'{sample.sample_name}.{barcode_name}.{lane}.bam')
 
-                    writer.writerow(line)
+                    # Use list splatting to build the contents of the library
+                    # and barcodes parameter files.
+                    barcode_line = [
+                        *([sample.index] if not self.samples_have_index2 else
+                          [sample.index, sample.index2]),
+                        barcode_name,
+                        library_name]
 
-    def _write_library_params(self, outdir, bam_out_prefix, lanes=4):
-        """
-        TODO: Refactor and document.
-        TODO: Provide tests.
-        TODO: Make public.
-        """
-        header = ['BARCODE_1', 'OUTPUT', 'SAMPLE_ALIAS', 'LIBRARY_NAME', 'DS']
+                    library_line = [
+                        *([sample.index] if not self.samples_have_index2 else
+                          [sample.index, sample.index2]),
+                        bam_file,
+                        sample.sample_name,
+                        sample.library_id,
+                        sample.description or '']
 
-        if not self.is_single_indexed:
-            header.insert(1, 'BARCODE_2')
+                    barcode_writer.writerow(map(str, barcode_line))
+                    library_writer.writerow(map(str, library_line))
 
-        for sample in self.samples:
-            sub_directory = f'{sample.Sample_Name}.{sample.Library_ID}'
-            bam_out = Path(bam_out_prefix) / sub_directory
-            os.makedirs(bam_out.expanduser().resolve(), exist_ok=True)
-
-        for lane in range(1, lanes + 1):
-            outfile = Path(outdir) / 'library_params.{}.txt'.format(lane)
-            with open(outfile.expanduser().resolve(), 'w') as handle:
-                writer = csv.writer(handle, delimiter='\t')
-                writer.writerow(header)
-
-                for sample in self.samples:
-                    filename = (
-                        f'{sample.Sample_Name}'
-                        f'.{sample.index}{sample.index2 or ""}'
-                        f'.{lane}.bam')
-
-                    line = [
-                        sample.index,
-                        bam_out.expanduser().resolve() / filename,
-                        sample.Sample_Name,
-                        sample.Library_ID,
-                        sample.Description or '']
-
-                    if not self.is_single_indexed:
-                        line.insert(1, sample.index2)
-
-                    writer.writerow(line)
-
-                u_out = (
-                    Path(bam_out_prefix).expanduser().resolve() /
-                    f'unmatched.{lane}.bam')
-
-                line = ['N', str(u_out), 'unmatched', 'unmatchedunmatched', '']
-
-                if not self.is_single_indexed:
-                    line.insert(1, 'N')
-
-                writer.writerow(line)
+                # Dempultiplexing relys on an umatched file so append that,
+                # but only to the library parameters file.
+                unmatched_file = bam_prefix / f'unmatched.{lane}.bam'
+                library_line = [
+                    *(['N'] if not self.samples_have_index2 else
+                      ['N', 'N']),
+                    unmatched_file, 'unmatched', 'unmatchedunmatched', '']
+                library_writer.writerow(map(str, library_line))
 
     def __len__(self):
         """Return the number of samples on this ``SampleSheet``."""
@@ -599,11 +657,11 @@ class SampleSheet:
         return f'{self.__class__.__name__}({path})'
 
     def __str__(self):
-        """Prints a summary unicode representation of a ``SampleSheet``.
+        """Prints a summary representation of this sample sheet.
 
-        If the `__str__()` method is called on a device that identifies as a
-        TTY then render a unicode representation. If no TTY is detected then
-        return the invocable representation of this instance.
+        If the ``__str__()`` method is called on a device that identifies as a
+        TTY then render a TTY compatible representation. If no TTY is detected
+        then return the invocable representation of this instance.
 
         """
         try:
@@ -611,57 +669,70 @@ class SampleSheet:
         except OSError:
             isatty = False
 
-        return self.__unicode__() if isatty else self.__repr__()
+        return self._repr_tty_() if isatty else self.__repr__()
 
-    def __unicode__(self):
-        """
-        TODO: Refactor and document.
-        TODO: Provide tests.
-        """
-        SAMPLE_IDENTIFIERS = [
+    def _repr_tty_(self):
+        """Return a summary of this sample sheet in a TTY compatible codec."""
+        header_description = ['sample_id', 'description']
+        header_samples = [
             'sample_id',
             'sample_name',
             'library_id',
-            'i7_index_id',
             'index',
-            'i5_index_id',
             'index2']
 
-        SAMPLE_DESCRIPTIONS = [
-            'sample_id',
-            'description']
-
-        """Return summary unicode tables of this sample sheet."""
         header = SingleTable([], 'Header')
-        header.inner_heading_row_border = False
-        for key in self.header.keys:
-            header.table_data.append((key, getattr(self.header, key) or ''))
-
         setting = SingleTable([], 'Settings')
-        setting.inner_heading_row_border = False
+        sample_main = SingleTable([header_samples], 'Identifiers')
+        sample_desc = SingleTable([header_description], 'Descriptions')
+
+        # All key:value pairs found in the [Header] section.
+        max_header_width = max(MIN_WIDTH, sample_desc.column_max_width(-1))
+        for key in self.header.keys:
+            if 'description' in key:
+                value = '\n'.join(wrap(
+                    getattr(self.header, key),
+                    max_header_width))
+            else:
+                value = getattr(self.header, key)
+            header.table_data.append([key, value])
+
+        # All key:value pairs found in the [Settings] and [Reads] sections.
         for key in self.settings.keys:
             setting.table_data.append((key, getattr(self.settings, key) or ''))
-        setting.table_data.append(('Reads', ', '.join(map(str, self.reads))))
+        setting.table_data.append(('reads', ', '.join(map(str, self.reads))))
 
-        sample_main = SingleTable([SAMPLE_IDENTIFIERS], 'Identifiers')
-        sample_desc = SingleTable([SAMPLE_DESCRIPTIONS], 'Descriptions')
-        description_width = sample_desc.column_max_width(-1)
-
+        # Descriptions are wrapped to the allowable space remaining.
+        description_width = max(MIN_WIDTH, sample_desc.column_max_width(-1))
         for sample in self.samples:
+            # Add all key:value pairs for this sample
             sample_main.table_data.append(
-                [getattr(sample, title) or '' for title in SAMPLE_IDENTIFIERS])
-
+                [getattr(sample, title) or '' for title in header_samples])
+            # Wrap and add the sample descrption
             sample_desc.table_data.append((
-                sample.Sample_ID or '',
-                '\n'.join(wrap(sample.Description or '', description_width))))
+                sample.sample_id,
+                '\n'.join(wrap(sample.description or '', description_width))))
 
-        tables = [
-            header.table,
-            setting.table,
-            sample_main.table,
-            sample_desc.table]
+        # These tables do not have horizontal headers so remove the frame.
+        header.inner_heading_row_border = False
+        setting.inner_heading_row_border = False
 
-        return '\n'.join(tables)
+        table = '\n'.join([
+            header.table, setting.table, sample_main.table, sample_desc.table])
+
+        return table
+
+
+def is_ipython_interpreter():
+    try:
+        # The presence of this global name indicates we are in an
+        # IPython interpreter and are safe to render Markdown.
+        __IPYTHON__  # noqa
+        # Attempt to import the IPython library
+        import IPython  # noqa
+        return True
+    except (ImportError, NameError):
+        return False
 
 
 def camel_case_to_snake_case(string):
@@ -670,14 +741,6 @@ def camel_case_to_snake_case(string):
     Supports multiple capital letters in a row, numerals, and any amount of
     whitespace.
 
-    Examples
-    --------
-    >>> ...
-
-    Notes
-    -----
-        TODO: Document.
-        TODO: Provide doc examples.
     """
     grapheme_pattern = re.compile('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))')
     whitespace_pattern = re.compile('\s')
