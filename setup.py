@@ -14,13 +14,13 @@ except (ImportError, OSError):
 setup(
     name='sample_sheet',
     packages=['sample_sheet'],
-    version='0.1.0',
+    version='0.1.1',
     description='An Illumina Sample Sheet parsing utility.',
     long_description=long_description,
     author='clintval',
     author_email='valentine.clint@gmail.com',
     url='https://github.com/clintval/sample-sheet',
-    download_url='https://github.com/clintval/sample-sheet/archive/v0.1.0.tar.gz',  # noqa
+    download_url='https://github.com/clintval/sample-sheet/archive/v0.1.1.tar.gz',  # noqa
     py_modules=['sample_sheet'],
     install_requires=[
         'click',
