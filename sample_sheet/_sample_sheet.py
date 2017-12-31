@@ -18,6 +18,9 @@ __all__ = [
     'SampleSheet',
     'camel_case_to_snake_case']
 
+# The minimum column with of a detected TTY for wrapping text in CLI columns.
+MIN_WIDTH = 10
+
 
 class ReadStructure:
     """ Information regarding the order and number of cycles in a sequence of
@@ -684,7 +687,7 @@ class SampleSheet:
         sample_desc = SingleTable([header_description], 'Descriptions')
 
         # All key:value pairs found in the [Header] section.
-        max_header_width = sample_desc.column_max_width(-1)
+        max_header_width = max(MIN_WIDTH, sample_desc.column_max_width(-1))
         for key in self.header.keys:
             if 'description' in key:
                 value = '\n'.join(wrap(
@@ -700,7 +703,7 @@ class SampleSheet:
         setting.table_data.append(('reads', ', '.join(map(str, self.reads))))
 
         # Descriptions are wrapped to the allowable space remaining.
-        description_width = sample_desc.column_max_width(-1)
+        description_width = max(MIN_WIDTH, sample_desc.column_max_width(-1))
         for sample in self.samples:
             # Add all key:value pairs for this sample
             sample_main.table_data.append(
