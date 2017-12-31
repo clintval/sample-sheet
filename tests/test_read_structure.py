@@ -4,10 +4,12 @@ from nose.tools import assert_raises
 from nose.tools import assert_true
 from nose.tools import eq_
 
+from unittest import TestCase
+
 from sample_sheet import *  # Test import of __all__
 
 
-class TestReadStructure:
+class TestReadStructure(TestCase):
     """Unit tests for ``ReadStructure``"""
 
     def test_regex_validation(self):

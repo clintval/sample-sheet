@@ -1,9 +1,11 @@
 from nose.tools import assert_is_none, eq_
 
+from unittest import TestCase
+
 from sample_sheet._sample_sheet import SampleSheetSection, Header, Settings
 
 
-class TestSampleSheetSectiont:
+class TestSampleSheetSectiont(TestCase):
     """Unit Test for ``SampleSheetSection``"""
 
     def test_default_getattr(self):

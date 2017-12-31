@@ -4,6 +4,7 @@ import os
 import re
 import sys
 
+from contextlib import ExitStack
 from pathlib import Path
 from textwrap import wrap
 
@@ -56,7 +57,7 @@ class ReadStructure:
 
     def __init__(self, structure):
         if not bool(self._valid_pattern.match(structure)):
-            raise ValueError('Not a valid structure: {}'.format(structure))
+            raise ValueError('Not a valid structure: "{}"'.format(structure))
         self.structure = structure
 
     @property
@@ -274,43 +275,38 @@ class Settings(SampleSheetSection):
 class SampleSheet:
     """A representation of an Illumina sample sheet.
 
-    A sample sheet document almost conform to the .ini standards but does not,
+    A sample sheet document almost conform to the .ini standards, but does not,
     so a custom parser is needed. Sample sheets are stored in plain text with
     comma-seperated values and string quoting around any field which contains a
-    comma. The sample sheet is composed of four sections, maked by a header.
+    comma. The sample sheet is composed of four sections, marked by a header.
 
         [Header]   : .ini convention
         [Settings] : .ini convention
         [Reads]    : .ini convention as a vertical array of items
         [Data]     : table with header
 
+    Parameters
+    ----------
+    path : str or pathlib.Path, optional
+        Any path supported by ``pathlib.Path`` and ``smart_open``.
 
     Notes
     -----
-    1. Write better docstrings
-    2. Cleanup and test parser
-    3. Add tests and test sample sheets
-    4. Add support for printing Picard files for libraries and barcodes
+    - Test basecalling params
+    - Test parser
+    - Test unicode __repr__
 
     """
 
     def __init__(self, path=None):
-        """Constructs a ``SampleSheet`` from a file object.
-
-        Parameters
-        ----------
-        path : str or pathlib.Path, optional
-            Path to filesystem file or any path supported by ``smart_open``
-                if installed.
-
-        """
         self._samples = []
 
         self.path = path
         self.reads = []
+
         self.read_structure = None
-        self.samples_have_index = False
-        self.samples_have_index2 = False
+        self.samples_have_index = None
+        self.samples_have_index2 = None
 
         self.header, self.settings = Header(), Settings()
 
@@ -318,7 +314,7 @@ class SampleSheet:
             self._parse(self.path)
 
     @staticmethod
-    def _path_to_csv_reader(path):
+    def _make_csv_reader(path):
         """Return a ``csv.reader`` for a filepath.
 
         This helper method is required since ``smart_open.smart_open`` cannot
@@ -328,8 +324,7 @@ class SampleSheet:
         Parameters
         ----------
         path : str or pathlib.Path
-            Path to filesystem file or any path supported by ``smart_open``
-                if installed.
+            Any path supported by ``pathlib.Path`` and ``smart_open``.
 
         Returns
         -------
@@ -344,11 +339,15 @@ class SampleSheet:
     @property
     def is_paired_end(self):
         """Return if the samples are paired-end."""
+        if len(self.reads) == 0:
+            return None
         return len(self.reads) == 2
 
     @property
     def is_single_end(self):
         """Return if the samples are single-end."""
+        if len(self.reads) == 0:
+            return None
         return len(self.reads) == 1
 
     @property
@@ -360,7 +359,7 @@ class SampleSheet:
         sample_header = None
         header_pattern = re.compile(r'\[(.*)\]')
 
-        for line in self._path_to_csv_reader(path):
+        for line in self._make_csv_reader(path):
             if all(field.strip() == '' for field in line):
                 continue   # Skip all blank lines
 
@@ -399,13 +398,18 @@ class SampleSheet:
         all have the sample ``read_structure`` attribute, if supplied. The
         ``SampleSheet`` will inherit the same ``read_structure`` attribute.
 
-        A ValueError is issued if a sample with the sample ``sample_id`` and
-        ``sample_library`` are added.
+        Samples cannot be added if the following criteria is met:
+            - ``sample_id`` and ``sample_library`` combination exists
+            - ``index`` and/or ``index2`` combination exists
+            - Samplesheet.reads and Sample.read_structure are incompatible
+            - Sample does not have ``index`` defined but others do
+            - Sample does not have ``index2`` defined but others do
+            - If defined, sample ``read_structure`` is different than others
 
         Parameters
         ----------
-        sample : sample_sheet.Sample
-            A sample to be added.
+        sample : Sample
+            Sample to add to this sample sheet.
 
         """
         if len(self.samples) == 0:
@@ -443,8 +447,9 @@ class SampleSheet:
                 f'than read structure in samplesheet ({self.read_structure}).')
 
         # Compare this sample against all those already defined to ensure none
-        # have equal ``sample_id`` or ``library_id`` attributes. Also make sure
-        # that all samples have attributes ``index``, ``index2`` or both.
+        # have equal ``sample_id`` or ``library_id`` attributes. Ensure that
+        # all samples have attributes ``index``, ``index2`` or both. Check to
+        # make sure this sample's index combination has not been added before.
         for other in self.samples:
             if sample == other:
                 raise ValueError(
@@ -458,6 +463,16 @@ class SampleSheet:
                 raise ValueError(
                     f'Cannot add a sample without attribute ``index2`` if a '
                     f'previous sample has ``index2`` set: {sample})')
+            if (
+                (self.samples_have_index and not self.samples_have_index2 and
+                 sample.index == other.index) or
+                (self.samples_have_index and self.samples_have_index2 and
+                 sample.index == other.index and
+                 sample.index2 == sample.index2)
+            ):
+                raise ValueError(
+                    f'Sample index combination for {sample} has already been '
+                    f'added: {other}')
 
         self._samples.append(sample)
 
@@ -489,109 +504,139 @@ class SampleSheet:
         except (ImportError, NameError):
             return markdown
 
-    def to_basecalling_params(self, path_prefix, lanes):
-        """Used to generate files needed by picard ExtractIlluminaBarcodes.
+    def to_picard_basecalling_params(self, directory, bam_prefix, lanes):
+        """Writes sample and library information to a set of files for a given
+        set of lanes.
 
-        The output files are tab-delimited and have information regarding the
-        barcode sequences, barcode names, and, optionally, the library name.
-        Barcodes must be unique and all the same length.
+        BARCODE PARAMETERS FILES: Store information regarding the sample index
+        sequences, sample index names, and, optionally, the library name. These
+        files are used by Picard's `CollectIlluminaBasecallingMetrics` and
+        Picard's `ExtractIlluminaBarcodes`. The output tab-seperated files are
+        formatted as:
 
-        TODO: Validate barcodes are all same length.
-        TODO: Refactor and document.
-        TODO: Provide tests.
+            <directory>/barcode_params.<lane>.txt
+
+        LIBRARY PARAMETERS FILES: Store information regarding the sample index
+        sequences, sample index names, and optionally sample library and
+        descriptions. A path to the resulting demultiplexed BAM file is also
+        stored which is used by Picard's `IlluminaBasecallsToSam`. The output
+        tab-seperated files are formatted as:
+
+            <directory>/library_params.<lane>.txt
+
+        The format of the BAM file output paths in the library parameter files
+        are formatted as:
+
+            <bam_prefix>/<sample_name>.<sample_library>/
+                <sample_name>.<index><index2>.<lane>.bam
+
+        Two files will be written to `directory` for all `lanes` specified. If
+        the path to `directory` does not exist, it will be created.
+
+        Parameters
+        ----------
+        directory : str or pathlib.Path
+            File path to the directory to write the parameter files.
+        bam_prefix: str or pathlib.Path
+            Where the demultiplexed BAMs should be written.
+        lanes : int, or iterable of int
+            The lanes to write basecalling parameters for.
+
 
         """
-        if not isinstance(lanes, (list, tuple)):
-            raise ValueError(f'Lanes must be a list or tuple: {lanes}')
         if self.samples_have_index is None:
-            raise ValueError(f'Samples must have at least ``index``')
+            raise ValueError(f'Samples must have at least attr. ``index``')
+        if (
+            not isinstance(lanes, int) or
+            not all(isinstance(lane, int) for lane in lanes)
+        ):
+            raise ValueError(f'Lanes must be an int or list of ints: {lanes}')
+        if len(set(len(sample.index) for sample in self.samples)) != 1:
+            raise ValueError('I7 indexes have differing lengths.')
+        if len(set(len(sample.index2) for sample in self.samples)) != 1:
+            raise ValueError('I5 indexes have differing lengths.')
 
-        path_prefix = Path(path_prefix)
-        path_prefix.mkdir(exist_ok=True, parents=True)
+        # Make lanes iterable if only an int was provided.
+        lanes = [lanes] if isinstance(lanes, int) else lanes
 
-        header = ['barcode_sequence_1', 'barcode_name', 'library_name']
-        if self.samples_have_index2:
-            header.insert(1, 'barcode_sequence_2')
+        # Resolve path to basecalling parameter files.
+        prefix = Path(directory).expanduser().resolve()
+        prefix.mkdir(exist_ok=True, parents=True)
+
+        # Promote bam_prefix to Path object.
+        bam_prefix = Path(bam_prefix).expanduser().resolve()
+
+        # Both headers are one column larger if an ``index2`` attribute is
+        # present on all samples. Use list splatting to unpack the options.
+        barcode_header = [
+            *(('barcode_sequence_1') if self.samples_have_index2 else
+              ('barcode_sequence_1', 'barcode_sequence_2')),
+            'barcode_name', 'library_name']
+        # TODO: Remove description if none is provided on all samples.
+        library_header = [
+            *(('BARCODE_1') if self.samples_have_index2 else
+              ('BARCODE_1', 'BARCODE_2')),
+            'OUTPUT', 'SAMPLE_ALIAS', 'LIBRARY_NAME', 'DS']
 
         for lane in lanes:
-            outfile = path_prefix / 'barcode_params.{}.txt'.format(lane)
+            barcode_out = prefix / f'barcode_params.{lane}.txt'
+            library_out = prefix / f'library_params.{lane}.txt'
 
-            with open(str(outfile.expanduser().resolve()), 'w') as handle:
-                writer = csv.writer(handle, delimiter='\t')
-                writer.writerow(header)
+            # Enter into a writing context for both library and barcode params.
+            with ExitStack() as stack:
+                barcode_writer = csv.writer(
+                    stack.enter_context(open(barcode_out, 'w')),
+                    delimiter='\t')
+                library_writer = csv.writer(
+                    stack.enter_context(open(library_out, 'w')),
+                    delimiter='\t')
+
+                barcode_writer.writerow(barcode_header)
+                library_writer.writerow(library_header)
 
                 for sample in self.samples:
+                    # The long name of a sample is a combination of the sample
+                    # ID and the sample library.
+                    long_name = sample.sample_name + (sample.library_id or 'a')
+
+                    # The barcode name is all sample indexes concatenated.
                     barcode_name = sample.index + (sample.index2 or '')
                     library_name = sample.library_id or ''
-                    barcode_sequence_1 = sample.index
 
-                    line = [barcode_sequence_1, barcode_name, library_name]
-                    if self.samples_have_index2:
-                        barcode_name = sample.index
-                        line.insert(1, sample.index2)
+                    # Assemble the path to the future BAM file.
+                    bam_file = (
+                        bam_prefix / long_name /
+                        f'{sample.sample_name}.{barcode_name}.{lane}.bam')
 
-                    writer.writerow(line)
+                    # Use list splatting to build the contents of the library
+                    # and barcodes parameter files. Default library ID, if none
+                    # is specificed, is currently hardcoded as "a".
+                    # TODO: Remove need for the implicit default.
+                    barcode_line = [
+                        *((sample.index) if self.samples_have_index2 else
+                          (sample.index, sample.index2)),
+                        barcode_name,
+                        library_name]
 
-    def to_library_params(self, path_prefix, bam_out_prefix, lanes):
-        """
-        TODO: Refactor and document.
-        TODO: Provide tests.
-        TODO: Make public.
-        """
-        if not isinstance(lanes, (list, tuple)):
-            raise ValueError(f'Lanes must be a list or tuple: {lanes}')
-        if self.samples_have_index is None:
-            raise ValueError(f'Samples must have at least ``index``')
-
-        path_prefix = Path(path_prefix)
-        path_prefix.mkdir(exist_ok=True, parents=True)
-
-        header = ['BARCODE_1', 'OUTPUT', 'SAMPLE_ALIAS', 'LIBRARY_NAME', 'DS']
-        if self.samples_have_index2:
-            header.insert(1, 'BARCODE_2')
-
-        # for sample in self.samples:
-
-        #     os.makedirs(bam_out.expanduser().resolve(), exist_ok=True)
-
-        for lane in lanes:
-            outfile = path_prefix / 'library_params.{}.txt'.format(lane)
-
-            with open(str(outfile.expanduser().resolve()), 'w') as handle:
-                writer = csv.writer(handle, delimiter='\t')
-                writer.writerow(header)
-
-                for sample in self.samples:
-                    sub_directory = f'{sample.sample_name}.{sample.library_id or "a"}'
-                    bam_out = Path(bam_out_prefix) / sub_directory
-
-                    filename = (
-                        f'{sample.sample_name}'
-                        f'.{sample.index}{sample.index2 or ""}'
-                        f'.{lane}.bam')
-
-                    line = [
-                        sample.index,
-                        bam_out.expanduser().resolve() / filename,
+                    library_line = [
+                        *((sample.index) if self.samples_have_index2 else
+                          (sample.index, sample.index2)),
+                        bam_file,
                         sample.sample_name,
                         sample.library_id or 'a',
                         sample.description or '']
 
-                    if self.samples_have_index2:
-                        line.insert(1, sample.index2)
+                    barcode_writer.writerow(barcode_line)
+                    library_writer.writerow(library_line)
 
-                    writer.writerow(line)
-
-                u_out = (
-                    Path(bam_out_prefix).expanduser().resolve() /
-                    f'unmatched.{lane}.bam')
-
-                line = ['N', str(u_out), 'unmatched', 'unmatchedunmatched', '']
-
-                if self.samples_have_index2:
-                    line.insert(1, 'N')
-
-                writer.writerow(line)
+                # Dempultiplexing relys on an umatched file so append that,
+                # but only to the library parameters file.
+                unmatched_file = bam_prefix / f'unmatched.{lane}.bam'
+                library_line = [
+                    *(('N') if self.samples_have_index2 else
+                      ('N', 'N')),
+                    unmatched_file, 'unmatched', 'unmatchedunmatched', '']
+                library_writer.writerow(library_line)
 
     def __len__(self):
         """Return the number of samples on this ``SampleSheet``."""
