@@ -5,7 +5,7 @@ setup(
     packages=['sample_sheet'],
     version='0.0.2',
     description='An Illumina Sample Sheet parsing utility.',
-    long_description=open('README.rst').read().strip(),
+    long_description=open('README.md').read().strip(),
     author='clintval',
     author_email='valentine.clint@gmail.com',
     url='https://github.com/clintval/sample-sheet',
