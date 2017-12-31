@@ -546,8 +546,8 @@ class SampleSheet:
             The lanes to write basecalling parameters for.
 
         """
-        if self.samples_have_index is None:
-            raise ValueError(f'Samples must have at least attr. ``index``')
+        if len(self.samples) == 0:
+            raise ValueError('No samples in sample sheet')
         if not (
             isinstance(lanes, int) or
             isinstance(lanes, (list, tuple)) and
@@ -559,6 +559,11 @@ class SampleSheet:
             raise ValueError('I7 indexes have differing lengths.')
         if len(set(len(sample.index2 or '') for sample in self.samples)) != 1:
             raise ValueError('I5 indexes have differing lengths.')
+        for attr in ('sample_name', 'library_id', 'index'):
+            if any(getattr(sample, attr) is None for sample in self.samples):
+                raise ValueError(
+                    'Samples must have at least `sample_name`, '
+                    '`sample_library`, and `index` attributes')
 
         # Make lanes iterable if only an int was provided.
         lanes = [lanes] if isinstance(lanes, int) else lanes
@@ -600,7 +605,7 @@ class SampleSheet:
                     # The long name of a sample is a combination of the sample
                     # ID and the sample library.
                     long_name = '.'.join([
-                        sample.sample_name, sample.library_id or 'a'])
+                        sample.sample_name, sample.library_id])
 
                     # The barcode name is all sample indexes concatenated.
                     barcode_name = sample.index + (sample.index2 or '')
@@ -612,9 +617,7 @@ class SampleSheet:
                         f'{sample.sample_name}.{barcode_name}.{lane}.bam')
 
                     # Use list splatting to build the contents of the library
-                    # and barcodes parameter files. Default library ID, if none
-                    # is specificed, is currently hardcoded as "a".
-                    # TODO: Remove need for the implicit default.
+                    # and barcodes parameter files.
                     barcode_line = [
                         *([sample.index] if not self.samples_have_index2 else
                           [sample.index, sample.index2]),
@@ -626,11 +629,11 @@ class SampleSheet:
                           [sample.index, sample.index2]),
                         bam_file,
                         sample.sample_name,
-                        sample.library_id or 'a',
+                        sample.library_id,
                         sample.description or '']
 
-                    barcode_writer.writerow(barcode_line)
-                    library_writer.writerow(library_line)
+                    barcode_writer.writerow(map(str, barcode_line))
+                    library_writer.writerow(map(str, library_line))
 
                 # Dempultiplexing relys on an umatched file so append that,
                 # but only to the library parameters file.
@@ -639,7 +642,7 @@ class SampleSheet:
                     *(['N'] if not self.samples_have_index2 else
                       ['N', 'N']),
                     unmatched_file, 'unmatched', 'unmatchedunmatched', '']
-                library_writer.writerow(library_line)
+                library_writer.writerow(map(str, library_line))
 
     def __len__(self):
         """Return the number of samples on this ``SampleSheet``."""

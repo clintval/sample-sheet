@@ -5,6 +5,8 @@ from nose.tools import assert_raises
 from nose.tools import assert_true
 from nose.tools import eq_
 
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 from sample_sheet import *  # Test import of __all__
@@ -198,6 +200,105 @@ class TestSampleSheet(TestCase):
             '|         207 | 10x-FB        | exp001       | One more!     |')
 
         self.assertMultiLineEqual(design, table)
+
+    def test_to_picard_basecalling_params_no_samples(self):
+        """Test ``to_picard_basecalling_params()`` without samples."""
+        with TemporaryDirectory() as temp_dir:
+            sample_sheet = SampleSheet()
+            assert_raises(
+                ValueError,
+                sample_sheet.to_picard_basecalling_params,
+                temp_dir, temp_dir, lanes=1)
+
+    def test_to_picard_basecalling_params_incorrect_lanes_types(self):
+        """Test ``to_picard_basecalling_params()`` incorrect lane types."""
+        with TemporaryDirectory() as temp_dir:
+            sample_sheet = SampleSheet()
+            assert_raises(
+                ValueError,
+                sample_sheet.to_picard_basecalling_params,
+                temp_dir, temp_dir, lanes='string')
+            assert_raises(
+                ValueError,
+                sample_sheet.to_picard_basecalling_params,
+                temp_dir, temp_dir, lanes=[0.2, 2])
+
+    def test_to_picard_basecalling_params_insufficient_sample_attrs(self):
+        """Test ``to_picard_basecalling_params()`` required sample attrs."""
+        with TemporaryDirectory() as temp_dir:
+            sample_sheet = SampleSheet()
+            sample_sheet.add_sample(Sample({'sample_id': 23}))
+            assert_raises(
+                ValueError,
+                sample_sheet.to_picard_basecalling_params,
+                temp_dir, temp_dir, lanes=1)
+
+    def test_to_picard_basecalling_params_different_index_sizes(self):
+        """Test ``to_picard_basecalling_params()`` incorrect lane types."""
+        with TemporaryDirectory() as temp_dir:
+            sample_sheet = SampleSheet()
+            sample1 = Sample({'sample_id': 21, 'index': 'ACGT'})
+            sample2 = Sample({'sample_id': 22, 'index': 'ACG'})
+            sample_sheet.add_sample(sample1)
+            sample_sheet.add_sample(sample2)
+            assert_raises(
+                ValueError,
+                sample_sheet.to_picard_basecalling_params,
+                temp_dir, temp_dir, lanes=1)
+
+    def test_to_picard_basecalling_params_output_files(self):
+        """Test ``to_picard_basecalling_params()`` output files"""
+        bam_prefix = '/home/user'
+        lanes = [1, 2]
+        with TemporaryDirectory() as temp_dir:
+            sample1 = Sample({
+                'sample_id': 49,
+                'sample_name': '49-tissue',
+                'library_id': 'exp001',
+                'description': 'Lorum ipsum!',
+                'index': 'GAACT',
+                'index2': 'AGTTC'})
+            sample2 = Sample({
+                'sample_id': 23,
+                'sample_name': '23-tissue',
+                'library_id': 'exp001',
+                'description': 'Test description!',
+                'index': 'TGGGT',
+                'index2': 'ACCCA'})
+
+            sample_sheet = SampleSheet()
+            sample_sheet.add_sample(sample1)
+            sample_sheet.add_sample(sample2)
+            sample_sheet.to_picard_basecalling_params(
+                directory=temp_dir, bam_prefix=bam_prefix, lanes=lanes)
+
+            prefix = Path(temp_dir)
+            assert_true((prefix / 'barcode_params.1.txt').exists())
+            assert_true((prefix / 'barcode_params.2.txt').exists())
+            assert_true((prefix / 'library_params.1.txt').exists())
+            assert_true((prefix / 'library_params.2.txt').exists())
+
+            barcode_params = (
+                'barcode_sequence_1\tbarcode_sequence_2\tbarcode_name\tlibrary_name\n'  # noqa
+                'GAACT\tAGTTC\tGAACTAGTTC\texp001\n'                                    # noqa
+                'TGGGT\tACCCA\tTGGGTACCCA\texp001\n')                                   # noqa
+
+            library_params = (
+                'BARCODE_1\tBARCODE_2\tOUTPUT\tSAMPLE_ALIAS\tLIBRARY_NAME\tDS\n'                                                     # noqa
+                'GAACT\tAGTTC\t/home/user/49-tissue.exp001/49-tissue.GAACTAGTTC.{lane}.bam\t49-tissue\texp001\tLorum ipsum!\n'       # noqa
+                'TGGGT\tACCCA\t/home/user/23-tissue.exp001/23-tissue.TGGGTACCCA.{lane}.bam\t23-tissue\texp001\tTest description!\n'  # noqa
+                'N\tN\t/home/user/unmatched.{lane}.bam\tunmatched\tunmatchedunmatched\t\n')                                          # noqa
+
+            self.assertMultiLineEqual(
+                (prefix / 'barcode_params.1.txt').read_text(), barcode_params)
+            self.assertMultiLineEqual(
+                (prefix / 'barcode_params.2.txt').read_text(), barcode_params)
+            self.assertMultiLineEqual(
+                (prefix / 'library_params.1.txt').read_text(),
+                library_params.format(lane=1))
+            self.assertMultiLineEqual(
+                (prefix / 'library_params.2.txt').read_text(),
+                library_params.format(lane=2))
 
     def test_iter(self):
         """Test ``__iter__()`` and ``__next__()``"""
