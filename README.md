@@ -161,7 +161,7 @@ Pull requests and issues welcome! To make a development install:
 
 ```bash
 ❯ git clone git@github.com:clintval/sample-sheet.git
-❯ pip install -e 'sample-sheet[test]'
+❯ pip install -e 'sample-sheet[fancytest]'
 ```
 
 To run the tests:

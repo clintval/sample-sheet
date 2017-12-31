@@ -4,8 +4,7 @@ python:
   - "3.6"
   - "nightly"
 install:
-  - pip install .
-  - pip install -r test-requirements.txt
+  - pip install '.[test]'
 script:
   - nosetests -v
 notifications:
