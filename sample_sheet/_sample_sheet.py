@@ -44,15 +44,15 @@ class ReadStructure:
     ["10M", "141T", "8B"]
 
     """
-    _token_pattern = re.compile('(\d+[BMST])')
+    _token_pattern = re.compile(r'(\d+[BMST])')
 
     # Token can repeat one or more times along the entire string.
-    _valid_pattern = re.compile('^{}+$'.format(_token_pattern.pattern))
+    _valid_pattern = re.compile(r'^{}+$'.format(_token_pattern.pattern))
 
-    _index_pattern = re.compile('(\d+B)')
-    _umi_pattern = re.compile('(\d+M)')
-    _skip_pattern = re.compile('(\d+S)')
-    _template_pattern = re.compile('(\d+T)')
+    _index_pattern = re.compile(r'(\d+B)')
+    _umi_pattern = re.compile(r'(\d+M)')
+    _skip_pattern = re.compile(r'(\d+S)')
+    _template_pattern = re.compile(r'(\d+T)')
 
     def __init__(self, structure):
         if not bool(self._valid_pattern.match(structure)):
@@ -171,21 +171,24 @@ class Sample:
 
     """
 
-    def __init__(self, mappable={}):
+    def __init__(self, mappable=None):
         """Initialize a ``Sample``.
 
         Parameters
         ----------
-        mappable : dict
+        mappable : dict or None
             The key-value pairs describing this sample.
 
         """
+        if mappable is None:
+            mappable = {}
+
         self._recommended_keys = {'sample_id', 'sample_name', 'index'}
         self._other_keys = set()
 
-        self._whitespace_pattern = re.compile('\s+')
-        self._valid_index_key_pattern = re.compile('index2?')
-        self._valid_index_value_pattern = re.compile('^[ACGTN]*$')
+        self._whitespace_pattern = re.compile(r'\s+')
+        self._valid_index_key_pattern = re.compile(r'index2?')
+        self._valid_index_value_pattern = re.compile(r'^[ACGTN]*$')
 
         # Default attributes for recommended keys are empty strings.
         for key in self._recommended_keys:
@@ -753,7 +756,7 @@ def camel_case_to_snake_case(string):
     whitespace.
 
     """
-    grapheme_pattern = re.compile('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))')
-    whitespace_pattern = re.compile('\s')
+    grapheme_pattern = re.compile(r'((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))')
+    whitespace_pattern = re.compile(r'\s')
     name = whitespace_pattern.sub('', grapheme_pattern.sub(r'_\1', string))
     return name.lower()
