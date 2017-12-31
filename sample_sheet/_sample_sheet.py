@@ -690,9 +690,7 @@ class SampleSheet:
         max_header_width = max(MIN_WIDTH, sample_desc.column_max_width(-1))
         for key in self.header.keys:
             if 'description' in key:
-                value = '\n'.join(wrap(
-                    getattr(self.header, key),
-                    max_header_width))
+                value = '\n'.join(wrap(getattr(self.header, key), MIN_WIDTH))
             else:
                 value = getattr(self.header, key)
             header.table_data.append([key, value])
