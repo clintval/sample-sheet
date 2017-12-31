@@ -8,11 +8,7 @@ from contextlib import ExitStack
 from pathlib import Path
 from textwrap import wrap
 
-try:
-    from smart_open import smart_open as open
-except ImportError:
-    raise
-
+from smart_open import smart_open as open
 from tabulate import tabulate
 from terminaltables import SingleTable
 
@@ -255,6 +251,7 @@ class Sample:
 class SampleSheetSection:
     def __init__(self):
         self.keys = []
+        self._key_map = {}
 
     def __getattr__(self, attr):
         """Return None if an attribute is undefined."""
@@ -289,12 +286,6 @@ class SampleSheet:
     ----------
     path : str or pathlib.Path, optional
         Any path supported by ``pathlib.Path`` and ``smart_open``.
-
-    Notes
-    -----
-    - Test basecalling params
-    - Test parser
-    - Test unicode __repr__
 
     """
 
@@ -367,18 +358,21 @@ class SampleSheet:
             if section_match:
                 section, *_ = section_match.groups()
                 section = section.lower()
-                continue
 
             elif section in ('header', 'settings'):
                 key, value, *_ = line
-                attribute = getattr(self, section)
-                attribute.keys.append(key)
-                setattr(attribute, camel_case_to_snake_case(key), value)
-                continue
+                formatted_key = camel_case_to_snake_case(key)
+
+                # ``object_attribute`` is either  self.header or self.settings.
+                object_attribute = getattr(self, section)
+                object_attribute.keys.append(formatted_key)
+                object_attribute._key_map[key] = formatted_key
+                setattr(object_attribute, formatted_key, value)
+
             elif section == 'reads':
                 read_cycle, *_ = line
                 self.reads.append(int(read_cycle))
-                continue
+
             elif section == 'data':
                 if sample_header is None:
                     sample_header = line
@@ -390,6 +384,8 @@ class SampleSheet:
                         '{}'.format(line))
 
                 self.add_sample(Sample(dict(zip(sample_header, line))))
+            else:
+                pass
 
     def add_sample(self, sample):
         """Validate and add a ``Sample`` to this ``SampleSheet``.
@@ -481,9 +477,8 @@ class SampleSheet:
         """Return a markdown summary of the samples on this sample sheet.
 
         This property supports displaying rendered markdown only when running
-        within an IPython interpreter. This is achieved by checking the
-        existance of the variable ``__IPYTHON__``. If we are not running in an
-        IPython interpreter then print out a nicely formatted ASCII table.
+        within an IPython interpreter. If we are not running in an IPython
+        interpreter, then print out a nicely formatted ASCII table.
 
         Returns
         -------
@@ -497,14 +492,10 @@ class SampleSheet:
         header = ['sample_id', 'sample_name', 'library_id', 'description']
         table = [[getattr(s, h, '') for h in header] for s in self._samples]
         markdown = tabulate(table, headers=header, tablefmt='pipe')
-
-        try:
-            # The presence of this global name indicates we are in an
-            # IPython interpreter and are safe to render Markdown.
-            __IPYTHON__  # noqa
+        if is_ipython_interpreter():
             from IPython.display import Markdown
             return Markdown(markdown)
-        except (ImportError, NameError):
+        else:
             return markdown
 
     def to_picard_basecalling_params(self, directory, bam_prefix, lanes):
@@ -663,11 +654,11 @@ class SampleSheet:
         return f'{self.__class__.__name__}({path})'
 
     def __str__(self):
-        """Prints a summary unicode representation of a ``SampleSheet``.
+        """Prints a summary representation of this sample sheet.
 
-        If the `__str__()` method is called on a device that identifies as a
-        TTY then render a unicode representation. If no TTY is detected then
-        return the invocable representation of this instance.
+        If the ``__str__()`` method is called on a device that identifies as a
+        TTY then render a TTY compatible representation. If no TTY is detected
+        then return the invocable representation of this instance.
 
         """
         try:
@@ -675,57 +666,70 @@ class SampleSheet:
         except OSError:
             isatty = False
 
-        return self.__unicode__() if isatty else self.__repr__()
+        return self._repr_tty_() if isatty else self.__repr__()
 
-    def __unicode__(self):
-        """
-        TODO: Refactor and document.
-        TODO: Provide tests.
-        """
-        SAMPLE_IDENTIFIERS = [
+    def _repr_tty_(self):
+        """Return a summary of this sample sheet in a TTY compatible codec."""
+        header_description = ['sample_id', 'description']
+        header_samples = [
             'sample_id',
             'sample_name',
             'library_id',
-            'i7_index_id',
             'index',
-            'i5_index_id',
             'index2']
 
-        SAMPLE_DESCRIPTIONS = [
-            'sample_id',
-            'description']
-
-        """Return summary unicode tables of this sample sheet."""
         header = SingleTable([], 'Header')
-        header.inner_heading_row_border = False
-        for key in self.header.keys:
-            header.table_data.append((key, getattr(self.header, key) or ''))
-
         setting = SingleTable([], 'Settings')
-        setting.inner_heading_row_border = False
+        sample_main = SingleTable([header_samples], 'Identifiers')
+        sample_desc = SingleTable([header_description], 'Descriptions')
+
+        # All key:value pairs found in the [Header] section.
+        max_header_width = sample_desc.column_max_width(-1)
+        for key in self.header.keys:
+            if 'description' in key:
+                value = '\n'.join(wrap(
+                    getattr(self.header, key),
+                    max_header_width))
+            else:
+                value = getattr(self.header, key)
+            header.table_data.append([key, value])
+
+        # All key:value pairs found in the [Settings] and [Reads] sections.
         for key in self.settings.keys:
             setting.table_data.append((key, getattr(self.settings, key) or ''))
-        setting.table_data.append(('Reads', ', '.join(map(str, self.reads))))
+        setting.table_data.append(('reads', ', '.join(map(str, self.reads))))
 
-        sample_main = SingleTable([SAMPLE_IDENTIFIERS], 'Identifiers')
-        sample_desc = SingleTable([SAMPLE_DESCRIPTIONS], 'Descriptions')
+        # Descriptions are wrapped to the allowable space remaining.
         description_width = sample_desc.column_max_width(-1)
-
         for sample in self.samples:
+            # Add all key:value pairs for this sample
             sample_main.table_data.append(
-                [getattr(sample, title) or '' for title in SAMPLE_IDENTIFIERS])
-
+                [getattr(sample, title) or '' for title in header_samples])
+            # Wrap and add the sample descrption
             sample_desc.table_data.append((
-                sample.Sample_ID or '',
-                '\n'.join(wrap(sample.Description or '', description_width))))
+                sample.sample_id,
+                '\n'.join(wrap(sample.description or '', description_width))))
 
-        tables = [
-            header.table,
-            setting.table,
-            sample_main.table,
-            sample_desc.table]
+        # These tables do not have horizontal headers so remove the frame.
+        header.inner_heading_row_border = False
+        setting.inner_heading_row_border = False
 
-        return '\n'.join(tables)
+        table = '\n'.join([
+            header.table, setting.table, sample_main.table, sample_desc.table])
+
+        return table
+
+
+def is_ipython_interpreter():
+    try:
+        # The presence of this global name indicates we are in an
+        # IPython interpreter and are safe to render Markdown.
+        __IPYTHON__  # noqa
+        # Attempt to import the IPython library
+        import IPython  # noqa
+        return True
+    except (ImportError, NameError):
+        return False
 
 
 def camel_case_to_snake_case(string):

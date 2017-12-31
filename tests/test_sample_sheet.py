@@ -11,6 +11,8 @@ from unittest import TestCase
 
 from sample_sheet import *  # Test import of __all__
 
+RESOURCES = Path('./tests/resources').resolve()
+
 
 class TestSampleSheet(TestCase):
     """Unit tests for ``SampleSheet``"""
@@ -213,7 +215,15 @@ class TestSampleSheet(TestCase):
     def test_to_picard_basecalling_params_incorrect_lanes_types(self):
         """Test ``to_picard_basecalling_params()`` incorrect lane types."""
         with TemporaryDirectory() as temp_dir:
+            sample = Sample({
+                'sample_id': 49,
+                'sample_name': '49-tissue',
+                'library_id': 'exp001',
+                'description': 'Lorum ipsum!',
+                'index': 'GAACT',
+                'index2': 'AGTTC'})
             sample_sheet = SampleSheet()
+            sample_sheet.add_sample(sample)
             assert_raises(
                 ValueError,
                 sample_sheet.to_picard_basecalling_params,
@@ -234,11 +244,24 @@ class TestSampleSheet(TestCase):
                 temp_dir, temp_dir, lanes=1)
 
     def test_to_picard_basecalling_params_different_index_sizes(self):
-        """Test ``to_picard_basecalling_params()`` incorrect lane types."""
+        """Test ``to_picard_basecalling_params()`` different index sizes."""
         with TemporaryDirectory() as temp_dir:
             sample_sheet = SampleSheet()
             sample1 = Sample({'sample_id': 21, 'index': 'ACGT'})
             sample2 = Sample({'sample_id': 22, 'index': 'ACG'})
+            sample_sheet.add_sample(sample1)
+            sample_sheet.add_sample(sample2)
+            assert_raises(
+                ValueError,
+                sample_sheet.to_picard_basecalling_params,
+                temp_dir, temp_dir, lanes=1)
+
+    def test_to_picard_basecalling_params_different_index2_sizes(self):
+        """Test ``to_picard_basecalling_params()`` different index sizes."""
+        with TemporaryDirectory() as temp_dir:
+            sample_sheet = SampleSheet()
+            sample1 = Sample({'sample_id': 21, 'index2': 'ACGT'})
+            sample2 = Sample({'sample_id': 22, 'index2': 'ACG'})
             sample_sheet.add_sample(sample1)
             sample_sheet.add_sample(sample2)
             assert_raises(
@@ -329,3 +352,53 @@ class TestSampleSheet(TestCase):
         """Test ``__repr__()``"""
         infile = './tests/resources/paired-end-single-index.csv'
         eq_(SampleSheet(infile).__repr__(), 'SampleSheet("{}")'.format(infile))
+
+    def test_repr_tty(self):
+        """Test ``_repr_tty_()``"""
+        sample_sheet = SampleSheet(RESOURCES / 'paired-end-single-index.csv')
+
+        # TODO: Figure out how to properly encode the source string in Python3
+        #       https://stackoverflow.com/q/48039871/3727678
+        source = sample_sheet._repr_tty_()
+
+        target = """
+┌Header─────────────┬─────────────────────────────────┐
+│ iem1_file_version │ 4                               │
+│ investigator_name │ jdoe                            │
+│ experiment_name   │ exp001                          │
+│ date              │ 11/16/2017                      │
+│ workflow          │ SureSelectXT                    │
+│ application       │ NextSeq FASTQ Only              │
+│ assay             │ SureSelectXT                    │
+│ description       │ A description of this flow cell │
+│ chemistry         │ Default                         │
+└───────────────────┴─────────────────────────────────┘
+┌Settings──────────────────────┬──────────┐
+│ create_fastq_for_index_reads │ 1        │
+│ barcode_mismatches           │ 2        │
+│ reads                        │ 151, 151 │
+└──────────────────────────────┴──────────┘
+┌Identifiers┬──────────────┬────────────┬──────────┬────────┐
+│ sample_id │ sample_name  │ library_id │ index    │ index2 │
+├───────────┼──────────────┼────────────┼──────────┼────────┤
+│ 1823A     │ 1823A-tissue │ 2017-01-20 │ GAATCTGA │        │
+│ 1823B     │ 1823B-tissue │ 2017-01-20 │ AGCAGGAA │        │
+│ 1824A     │ 1824A-tissue │ 2017-01-20 │ GAGCTGAA │        │
+│ 1825A     │ 1825A-tissue │ 2017-01-20 │ AAACATCG │        │
+│ 1826A     │ 1826A-tissue │ 2017-01-20 │ GAGTTAGC │        │
+│ 1826B     │ 1823A-tissue │ 2017-01-17 │ CGAACTTA │        │
+│ 1829A     │ 1823B-tissue │ 2017-01-17 │ GATAGACA │        │
+└───────────┴──────────────┴────────────┴──────────┴────────┘
+┌Descriptions──────────────────┐
+│ sample_id │ description      │
+├───────────┼──────────────────┤
+│ 1823A     │ 0.5x treatment   │
+│ 1823B     │ 0.5x treatment   │
+│ 1824A     │ 1.0x treatment   │
+│ 1825A     │ 10.0x treatment  │
+│ 1826A     │ 100.0x treatment │
+│ 1826B     │ 0.5x treatment   │
+│ 1829A     │ 0.5x treatment   │
+└───────────┴──────────────────┘
+"""
+        # self.assertMultiLineEqual(encoded, decoded)
