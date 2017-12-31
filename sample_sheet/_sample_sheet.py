@@ -356,7 +356,7 @@ class SampleSheet:
         return self._samples
 
     def _parse(self, path):
-        sample_header = None
+        section = sample_header = None
         header_pattern = re.compile(r'\[(.*)\]')
 
         for line in self._make_csv_reader(path):
@@ -369,7 +369,7 @@ class SampleSheet:
                 section = section.lower()
                 continue
 
-            if section in ('header', 'settings'):
+            elif section in ('header', 'settings'):
                 key, value, *_ = line
                 attribute = getattr(self, section)
                 attribute.keys.append(key)
@@ -491,6 +491,9 @@ class SampleSheet:
             Returns a rendered Markdown when not displayed in IPython.
 
         """
+        if len(self.samples) == 0:
+            raise ValueError('No samples in sample sheet')
+
         header = ['sample_id', 'sample_name', 'library_id', 'description']
         table = [[getattr(s, h, '') for h in header] for s in self._samples]
         markdown = tabulate(table, headers=header, tablefmt='pipe')
@@ -542,18 +545,19 @@ class SampleSheet:
         lanes : int, or iterable of int
             The lanes to write basecalling parameters for.
 
-
         """
         if self.samples_have_index is None:
             raise ValueError(f'Samples must have at least attr. ``index``')
-        if (
-            not isinstance(lanes, int) or
-            not all(isinstance(lane, int) for lane in lanes)
+        if not (
+            isinstance(lanes, int) or
+            isinstance(lanes, (list, tuple)) and
+            len(lanes) > 0 and
+            all(isinstance(lane, int) for lane in lanes)
         ):
             raise ValueError(f'Lanes must be an int or list of ints: {lanes}')
-        if len(set(len(sample.index) for sample in self.samples)) != 1:
+        if len(set(len(sample.index or '') for sample in self.samples)) != 1:
             raise ValueError('I7 indexes have differing lengths.')
-        if len(set(len(sample.index2) for sample in self.samples)) != 1:
+        if len(set(len(sample.index2 or '') for sample in self.samples)) != 1:
             raise ValueError('I5 indexes have differing lengths.')
 
         # Make lanes iterable if only an int was provided.
@@ -569,13 +573,13 @@ class SampleSheet:
         # Both headers are one column larger if an ``index2`` attribute is
         # present on all samples. Use list splatting to unpack the options.
         barcode_header = [
-            *(('barcode_sequence_1') if self.samples_have_index2 else
-              ('barcode_sequence_1', 'barcode_sequence_2')),
+            *(['barcode_sequence_1'] if not self.samples_have_index2 else
+              ['barcode_sequence_1', 'barcode_sequence_2']),
             'barcode_name', 'library_name']
         # TODO: Remove description if none is provided on all samples.
         library_header = [
-            *(('BARCODE_1') if self.samples_have_index2 else
-              ('BARCODE_1', 'BARCODE_2')),
+            *(['BARCODE_1'] if not self.samples_have_index2 else
+              ['BARCODE_1', 'BARCODE_2']),
             'OUTPUT', 'SAMPLE_ALIAS', 'LIBRARY_NAME', 'DS']
 
         for lane in lanes:
@@ -585,11 +589,9 @@ class SampleSheet:
             # Enter into a writing context for both library and barcode params.
             with ExitStack() as stack:
                 barcode_writer = csv.writer(
-                    stack.enter_context(open(barcode_out, 'w')),
-                    delimiter='\t')
+                    stack.enter_context(barcode_out.open('w')), delimiter='\t')
                 library_writer = csv.writer(
-                    stack.enter_context(open(library_out, 'w')),
-                    delimiter='\t')
+                    stack.enter_context(library_out.open('w')), delimiter='\t')
 
                 barcode_writer.writerow(barcode_header)
                 library_writer.writerow(library_header)
@@ -597,7 +599,8 @@ class SampleSheet:
                 for sample in self.samples:
                     # The long name of a sample is a combination of the sample
                     # ID and the sample library.
-                    long_name = sample.sample_name + (sample.library_id or 'a')
+                    long_name = '.'.join([
+                        sample.sample_name, sample.library_id or 'a'])
 
                     # The barcode name is all sample indexes concatenated.
                     barcode_name = sample.index + (sample.index2 or '')
@@ -613,14 +616,14 @@ class SampleSheet:
                     # is specificed, is currently hardcoded as "a".
                     # TODO: Remove need for the implicit default.
                     barcode_line = [
-                        *((sample.index) if self.samples_have_index2 else
-                          (sample.index, sample.index2)),
+                        *([sample.index] if not self.samples_have_index2 else
+                          [sample.index, sample.index2]),
                         barcode_name,
                         library_name]
 
                     library_line = [
-                        *((sample.index) if self.samples_have_index2 else
-                          (sample.index, sample.index2)),
+                        *([sample.index] if not self.samples_have_index2 else
+                          [sample.index, sample.index2]),
                         bam_file,
                         sample.sample_name,
                         sample.library_id or 'a',
@@ -633,8 +636,8 @@ class SampleSheet:
                 # but only to the library parameters file.
                 unmatched_file = bam_prefix / f'unmatched.{lane}.bam'
                 library_line = [
-                    *(('N') if self.samples_have_index2 else
-                      ('N', 'N')),
+                    *(['N'] if not self.samples_have_index2 else
+                      ['N', 'N']),
                     unmatched_file, 'unmatched', 'unmatchedunmatched', '']
                 library_writer.writerow(library_line)
 
@@ -728,14 +731,6 @@ def camel_case_to_snake_case(string):
     Supports multiple capital letters in a row, numerals, and any amount of
     whitespace.
 
-    Examples
-    --------
-    >>> ...
-
-    Notes
-    -----
-        TODO: Document.
-        TODO: Provide doc examples.
     """
     grapheme_pattern = re.compile('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))')
     whitespace_pattern = re.compile('\s')

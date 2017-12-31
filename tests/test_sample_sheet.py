@@ -169,6 +169,9 @@ class TestSampleSheet(TestCase):
 
     def test_experiment_design_plain_text(self):
         """Test ``experimental_design()`` plain text output"""
+        sample_sheet = SampleSheet()
+        assert_raises(ValueError, lambda: sample_sheet.experimental_design)
+
         sample1 = Sample({
             'sample_id': 493,
             'sample_name': '10x-FA',
@@ -183,7 +186,6 @@ class TestSampleSheet(TestCase):
             'library_id': 'exp001',
             'description': 'One more!'}
         )
-        sample_sheet = SampleSheet()
         sample_sheet.add_sample(sample1)
         sample_sheet.add_sample(sample2)
         design = sample_sheet.experimental_design
