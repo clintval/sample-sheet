@@ -7,7 +7,7 @@
   ·
   <a href="#tutorial"><strong>Tutorial</strong></a>
   ·
-  <a href="#command-line-tools"><strong>Command Line Tools</strong></a>
+  <a href="#command-line-utility"><strong>Command Line Utility</strong></a>
   ·
   <a href="#contributing"><strong>Contributing</strong></a>
 </p>
@@ -109,18 +109,12 @@ ReadStructure(structure="151T8B151T")
 
 <br>
 
-<h3 align="center">Command Line Tools</h3>
-
-<p align="center">
-  <a href="#sample-sheet-summary"><strong>sample-sheet-summary</strong></a>
-</p>
-
-#### [sample-sheet-summary](#sample-sheet-summary)
+<h3 align="center">Command Line Utility</h3>
 
 Prints a tabular summary of the sample sheet.
 
 ```bash
-❯ sample-sheet-summary paired-end-single-index.csv
+❯ sample-sheet summary paired-end-single-index.csv
 ┌Header─────────────┬─────────────────────────────────┐
 │ iem1_file_version │ 4                               │
 │ investigator_name │ jdoe                            │
