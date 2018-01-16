@@ -13,9 +13,15 @@
 </p>
 
 <p align="center">
+  <a href="https://travis-ci.org/clintval/sample-sheet">
     <img src="https://travis-ci.org/clintval/sample-sheet.svg?branch=master"></img>
+  </a>
+  <a href="https://github.com/clintval/sample-sheet/issues">
     <img src="https://img.shields.io/github/issues/clintval/sample-sheet.svg"></img>
+  </a>
+  <a href="https://github.com/clintval/sample-sheet/blob/master/LICENSE">
     <img src="https://img.shields.io/github/license/clintval/sample-sheet.svg"></img>
+  </a>
 </p>
 
 <br>
