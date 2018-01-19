@@ -465,15 +465,29 @@ class SampleSheet:
                 raise ValueError(
                     f'Cannot add a sample without attribute ``index2`` if a '
                     f'previous sample has ``index2`` set: {sample})')
+
             if (
-                (self.samples_have_index and not self.samples_have_index2 and
-                 sample.index == other.index) or
-                (self.samples_have_index and self.samples_have_index2 and
-                 sample.index == other.index and
-                 sample.index2 == sample.index2)
+                self.samples_have_index and self.samples_have_index2 and
+                sample.index == other.index and sample.index2 == other.index2
             ):
                 raise ValueError(
                     f'Sample index combination for {sample} has already been '
+                    f'added: {other}')
+
+            if (
+                self.samples_have_index and not self.samples_have_index2 and
+                sample.index == other.index
+            ):
+                raise ValueError(
+                    f'First sample index for {sample} has already been '
+                    f'added: {other}')
+
+            if (
+                not self.samples_have_index and self.samples_have_index2 and
+                sample.index2 == other.index2
+            ):
+                raise ValueError(
+                    f'Second sample index for {sample} has already been '
                     f'added: {other}')
 
         self._samples.append(sample)
