@@ -33,8 +33,8 @@ setup(
         'fancytest': ['nose', 'nose-progressive', 'coverage'],
     },
     scripts=[
-        'scripts/csv-whitespace-strip',
-        'scripts/sample-sheet-summary',
+#        'scripts/csv-whitespace-strip',
+        'scripts/sample-sheet',
     ],
     license='MIT',
     zip_safe=True,

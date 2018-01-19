@@ -3,6 +3,9 @@ nosetests \
   -v \
   --progressive-with-bar \
   --with-coverage \
+  --with-doctest \
+  --doctest-tests \
   --cover-package=sample_sheet \
-  --with-progressive $(basename "${0}/tests") \
+  --with-progressive \
+  $(basename "${0}/tests") \
   "${@}"

@@ -44,15 +44,15 @@ class ReadStructure:
     ["10M", "141T", "8B"]
 
     """
-    _token_pattern = re.compile('(\d+[BMST])')
+    _token_pattern = re.compile(r'(\d+[BMST])')
 
     # Token can repeat one or more times along the entire string.
-    _valid_pattern = re.compile('^{}+$'.format(_token_pattern.pattern))
+    _valid_pattern = re.compile(r'^{}+$'.format(_token_pattern.pattern))
 
-    _index_pattern = re.compile('(\d+B)')
-    _umi_pattern = re.compile('(\d+M)')
-    _skip_pattern = re.compile('(\d+S)')
-    _template_pattern = re.compile('(\d+T)')
+    _index_pattern = re.compile(r'(\d+B)')
+    _umi_pattern = re.compile(r'(\d+M)')
+    _skip_pattern = re.compile(r'(\d+S)')
+    _template_pattern = re.compile(r'(\d+T)')
 
     def __init__(self, structure):
         if not bool(self._valid_pattern.match(structure)):
@@ -171,21 +171,24 @@ class Sample:
 
     """
 
-    def __init__(self, mappable={}):
+    def __init__(self, mappable=None):
         """Initialize a ``Sample``.
 
         Parameters
         ----------
-        mappable : dict
+        mappable : dict or None
             The key-value pairs describing this sample.
 
         """
+        if mappable is None:
+            mappable = {}
+
         self._recommended_keys = {'sample_id', 'sample_name', 'index'}
         self._other_keys = set()
 
-        self._whitespace_pattern = re.compile('\s+')
-        self._valid_index_key_pattern = re.compile('index2?')
-        self._valid_index_value_pattern = re.compile('(^[ACGTN]+$)|(^$)')
+        self._whitespace_pattern = re.compile(r'\s+')
+        self._valid_index_key_pattern = re.compile(r'index2?')
+        self._valid_index_value_pattern = re.compile(r'^[ACGTN]*$')
 
         # Default attributes for recommended keys are empty strings.
         for key in self._recommended_keys:
@@ -196,11 +199,10 @@ class Sample:
             key = self._whitespace_pattern.sub('_', key.lower())
             self._other_keys.add(key)
 
-            # Promote a read_structure key to ReadStructure.
+            # Promote a ``read_structure`` key to ``ReadStructure``.
             value = ReadStructure(value) if key == 'read_structure' else value
 
-            # If we have a sample index field, check to make sure the value
-            # matches the required pattern.
+            # Check to make sure the index is valid if it is supplied.
             if (
                 self._valid_index_key_pattern.match(key) and
                 not bool(self._valid_index_value_pattern.match(value))
@@ -243,6 +245,7 @@ class Sample:
             self.library_id == other.library_id)
 
     def __repr__(self):
+        """Return an executeable representaiton of this Sample."""
         args = {k: getattr(self, k) for k in sorted(self._recommended_keys)}
         args = args.__repr__().replace('\'', '"')
         return f'{self.__class__.__name__}({args})'
@@ -574,12 +577,16 @@ class SampleSheet:
         barcode_header = [
             *(['barcode_sequence_1'] if not self.samples_have_index2 else
               ['barcode_sequence_1', 'barcode_sequence_2']),
-            'barcode_name', 'library_name']
+            'barcode_name',
+            'library_name']
         # TODO: Remove description if none is provided on all samples.
         library_header = [
             *(['BARCODE_1'] if not self.samples_have_index2 else
               ['BARCODE_1', 'BARCODE_2']),
-            'OUTPUT', 'SAMPLE_ALIAS', 'LIBRARY_NAME', 'DS']
+            'OUTPUT',
+            'SAMPLE_ALIAS',
+            'LIBRARY_NAME',
+            'DS']
 
         for lane in lanes:
             barcode_out = prefix / f'barcode_params.{lane}.txt'
@@ -599,7 +606,8 @@ class SampleSheet:
                     # The long name of a sample is a combination of the sample
                     # ID and the sample library.
                     long_name = '.'.join([
-                        sample.sample_name, sample.library_id])
+                        sample.sample_name,
+                        sample.library_id])
 
                     # The barcode name is all sample indexes concatenated.
                     barcode_name = sample.index + (sample.index2 or '')
@@ -635,7 +643,10 @@ class SampleSheet:
                 library_line = [
                     *(['N'] if not self.samples_have_index2 else
                       ['N', 'N']),
-                    unmatched_file, 'unmatched', 'unmatchedunmatched', '']
+                    unmatched_file,
+                    'unmatched',
+                    'unmatchedunmatched',
+                    '']
                 library_writer.writerow(map(str, library_line))
 
     def __len__(self):
@@ -718,7 +729,10 @@ class SampleSheet:
         setting.inner_heading_row_border = False
 
         table = '\n'.join([
-            header.table, setting.table, sample_main.table, sample_desc.table])
+            header.table,
+            setting.table,
+            sample_main.table,
+            sample_desc.table])
 
         return table
 
@@ -736,13 +750,13 @@ def is_ipython_interpreter():
 
 
 def camel_case_to_snake_case(string):
-    """Convert a string in camelCase format into snake_case.
+    """Convert a string in CamelCase format into snake_case.
 
     Supports multiple capital letters in a row, numerals, and any amount of
     whitespace.
 
     """
-    grapheme_pattern = re.compile('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))')
-    whitespace_pattern = re.compile('\s')
+    grapheme_pattern = re.compile(r'((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))')
+    whitespace_pattern = re.compile(r'\s')
     name = whitespace_pattern.sub('', grapheme_pattern.sub(r'_\1', string))
     return name.lower()

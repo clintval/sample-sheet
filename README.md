@@ -7,15 +7,21 @@
   ·
   <a href="#tutorial"><strong>Tutorial</strong></a>
   ·
-  <a href="#command-line-tools"><strong>Command Line Tools</strong></a>
+  <a href="#command-line-utility"><strong>Command Line Utility</strong></a>
   ·
   <a href="#contributing"><strong>Contributing</strong></a>
 </p>
 
 <p align="center">
+  <a href="https://travis-ci.org/clintval/sample-sheet">
     <img src="https://travis-ci.org/clintval/sample-sheet.svg?branch=master"></img>
+  </a>
+  <a href="https://github.com/clintval/sample-sheet/issues">
     <img src="https://img.shields.io/github/issues/clintval/sample-sheet.svg"></img>
+  </a>
+  <a href="https://github.com/clintval/sample-sheet/blob/master/LICENSE">
     <img src="https://img.shields.io/github/license/clintval/sample-sheet.svg"></img>
+  </a>
 </p>
 
 <br>
@@ -109,18 +115,12 @@ ReadStructure(structure="151T8B151T")
 
 <br>
 
-<h3 align="center">Command Line Tools</h3>
-
-<p align="center">
-  <a href="#sample-sheet-summary"><strong>sample-sheet-summary</strong></a>
-</p>
-
-#### [sample-sheet-summary](#sample-sheet-summary)
+<h3 align="center">Command Line Utility</h3>
 
 Prints a tabular summary of the sample sheet.
 
 ```bash
-❯ sample-sheet-summary paired-end-single-index.csv
+❯ sample-sheet summary paired-end-single-index.csv
 ┌Header─────────────┬─────────────────────────────────┐
 │ iem1_file_version │ 4                               │
 │ investigator_name │ jdoe                            │
