@@ -118,6 +118,19 @@ class TestSampleSheet(TestCase):
         assert_false(sample_sheet.samples_have_index)
         assert_true(sample_sheet.samples_have_index2)
 
+    def test_add_samples_with_same_index_different_index2(self):
+        """Test that the SampleSheet sets samples if at least one index is
+        different
+
+        """
+        sample1 = Sample({'sample_id': 0, 'index': 'AGGTA', 'index2': 'AGGTA'})
+        sample2 = Sample({'sample_id': 1, 'index': 'AGGTA', 'index2': 'TTTTT'})
+        sample_sheet = SampleSheet()
+
+        sample_sheet.add_sample(sample1)
+
+        assert_is_none(sample_sheet.add_sample(sample2))
+
     def test_add_sample_same_twice(self):
         """Test ``add_sample()`` when two samples having the same ``sample_id``
         and ``library_id`` are added.
