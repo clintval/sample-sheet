@@ -8,30 +8,46 @@ from contextlib import ExitStack
 from pathlib import Path
 from textwrap import wrap
 
-from smart_open import smart_open as open
+from smart_open import smart_open
 from tabulate import tabulate
 from terminaltables import SingleTable
 
 __all__ = [
     'ReadStructure',
     'Sample',
-    'SampleSheet',
-    'camel_case_to_snake_case']
+    'SampleSheet']
 
 # The minimum column with of a detected TTY for wrapping text in CLI columns.
 MIN_WIDTH = 10
 
+# From the section "Character Encoding" in the Illumina format specification.
+#
+# https://www.illumina.com/content/dam/illumina-marketing/
+#     documents/products/technotes/
+#     sequencing-sheet-format-specifications-technical-note-970-2017-004.pdf
+VALID_ASCII_CODES = [
+    10,
+    13,
+    32,
+    *list(range(33, 47)),
+    *list(range(48, 127))]
+
 
 class ReadStructure:
-    """ Information regarding the order and number of cycles in a sequence of
-    sample template bases, indexes, and unique molecular identifiers (UMI).
+    """An object describing the order, number, and type of bases in a read.
 
-    The tokens follow this scheme:
+    A read structure is a sequence of tokens in the form <number><type> where
+    <type> can describe template, skip, index, or UMI bases.
 
         - T: template base
         - S: skipped base
         - B: sample index
         - M: unique molecular identifer
+
+    Parameters
+    ----------
+    structure : str
+        String representation of a read structure.
 
     Examples
     --------
@@ -42,6 +58,11 @@ class ReadStructure:
     True
     >>> rs.tokens
     ["10M", "141T", "8B"]
+
+    Notes
+    -----
+    This class does not currently support read structures where the last token
+    has ambiguous length by using the <+> operator preceding the <type>.
 
     """
     _token_pattern = re.compile(r'(\d+[BMST])')
@@ -56,7 +77,7 @@ class ReadStructure:
 
     def __init__(self, structure):
         if not bool(self._valid_pattern.match(structure)):
-            raise ValueError('Not a valid structure: "{}"'.format(structure))
+            raise ValueError(f'Not a valid read structure: "{structure}"')
         self.structure = structure
 
     @property
@@ -151,39 +172,36 @@ class ReadStructure:
 
 
 class Sample:
-    """A single sample from a sample sheet.
+    """A single sample for a sample sheet.
 
     This class is built with the keys and values in the [Data] section of the
     sample sheet. Although no keys are explicitly required it is recommended to
-    at least use "Sample_ID", "Sample_Name", and "index". All keys will be
-    converted to lower case with whitespace replaced by underscores. If a key
-    is found matching the case agnostic pattern "read_structure" then the the
-    value is promoted to ``ReadStructure``.
+    at least use "Sample_ID", "Sample_Name", and "index". All keys with
+    whitespace will have the whitespace replaced with a single underscore. If
+    the key ``Read_Structure`` is provided then its value is promoted to class
+    ``ReadStructure`` and additional functionality is enabled.
+
+    Parameters
+    ----------
+    mappable : dict, optional
+        The key-value pairs describing this sample.
 
     Examples
     --------
-    >>> sample = Sample({'Sample_Name': '3T', 'Sample_ID': '87', 'index': 'A'})
+    >>> sample = Sample({"Sample_ID": "87", "Sample_Name": "3T", "index": "A"})
     >>> sample
-    Sample({"index": "A", "Sample_Name": "3T", "Sample_ID": "87"})
-    >>> sample = Sample({'Read Structure': '151T'})
-    >>> sample.read_structure
+    Sample({"Sample_ID": "87", "Sample_Name": "3T", "index": "A"})
+    >>> sample = Sample({'Read_Structure': '151T'})
+    >>> sample.Read_Structure
     ReadStructure("151T")
 
     """
 
     def __init__(self, mappable=None):
-        """Initialize a ``Sample``.
-
-        Parameters
-        ----------
-        mappable : dict or None
-            The key-value pairs describing this sample.
-
-        """
         if mappable is None:
-            mappable = {}
+            mappable = dict()
 
-        self._recommended_keys = {'sample_id', 'sample_name', 'index'}
+        self._recommended_keys = {'Sample_ID', 'Sample_Name', 'index'}
         self._other_keys = set()
 
         self._whitespace_pattern = re.compile(r'\s+')
@@ -195,12 +213,12 @@ class Sample:
             setattr(self, key, None)
 
         for key, value in mappable.items():
-            # Convert whitepsace to a single underscore and lower case keys.
-            key = self._whitespace_pattern.sub('_', key.lower())
+            # Convert whitepsace to a single underscore.
+            key = self._whitespace_pattern.sub('_', key)
             self._other_keys.add(key)
 
-            # Promote a ``read_structure`` key to ``ReadStructure``.
-            value = ReadStructure(value) if key == 'read_structure' else value
+            # Promote a ``Read_Structure`` key to ``ReadStructure``.
+            value = ReadStructure(value) if key == 'Read_Structure' else value
 
             # Check to make sure the index is valid if it is supplied.
             if (
@@ -212,16 +230,16 @@ class Sample:
             setattr(self, key, value)
 
         if (
-            self.read_structure is not None and
-            self.read_structure.is_single_indexed and
+            self.Read_Structure is not None and
+            self.Read_Structure.is_single_indexed and
             self.index is None
         ):
             raise ValueError(
                 f'If a single-indexed read structure is defined then a '
                 f'sample ``index`` must be defined also: {self}')
         elif (
-            self.read_structure is not None and
-            self.read_structure.is_dual_indexed and
+            self.Read_Structure is not None and
+            self.Read_Structure.is_dual_indexed and
             self.index is None and
             self.index2 is None
         ):
@@ -235,23 +253,23 @@ class Sample:
         return self._recommended_keys.union(self._other_keys)
 
     def __getattr__(self, attr):
-        """Return None if an attribute is undefined."""
+        """Return ``None`` if an attribute is undefined."""
         return self.__dict__.get(attr, None)
 
     def __eq__(self, other):
-        """Samples are equal if ``sample_id`` and ``library_id`` are equal."""
+        """Samples are equal if ``Sample_ID`` and ``Library_ID`` are equal."""
         return (
-            self.sample_id == other.sample_id and
-            self.library_id == other.library_id)
+            self.Sample_ID == other.Sample_ID and
+            self.Library_ID == other.Library_ID)
 
     def __repr__(self):
-        """Return an executeable representaiton of this Sample."""
+        """Show the constructor command used to initialize this object."""
         args = {k: getattr(self, k) for k in sorted(self._recommended_keys)}
         args = args.__repr__().replace('\'', '"')
         return f'{self.__class__.__name__}({args})'
 
     def __str__(self):
-        return str(self.sample_id)
+        return str(self.Sample_ID)
 
 
 class SampleSheetSection:
@@ -260,8 +278,12 @@ class SampleSheetSection:
         self._key_map = {}
 
     def __getattr__(self, attr):
-        """Return None if an attribute is undefined."""
-        return self.__dict__.get(attr, None)
+        """Return ``None`` If an attribute does not exist."""
+        return self.__dict__.get(attr)
+
+    def __eq__(self, other):
+        """Sections are equivalent if their dictionaries are equivalent."""
+        return self.__dict__ == other.__dict__
 
     def __repr__(self):
         return f'{self.__class__.__name__}'
@@ -299,13 +321,13 @@ class SampleSheet:
         self._samples = []
 
         self.path = path
-        self.reads = []
+        self.Reads = []
 
-        self.read_structure = None
+        self.Read_Structure = None
         self.samples_have_index = None
         self.samples_have_index2 = None
 
-        self.header, self.settings = Header(), Settings()
+        self.Header, self.Settings = Header(), Settings()
 
         if self.path:
             self._parse(self.path)
@@ -329,23 +351,23 @@ class SampleSheet:
             A configured ``csv.reader`` for iterating through the sample sheet.
 
         """
-        handle = io.StringIO(open(str(path)).read().decode('utf8'), newline='')
+        encoding = 'utf8'
+        string = smart_open(str(path)).read().decode(encoding)
+        handle = io.StringIO(string, newline='')
         reader = csv.reader(handle, skipinitialspace=True)
         return reader
 
     @property
     def is_paired_end(self):
         """Return if the samples are paired-end."""
-        if len(self.reads) == 0:
-            return None
-        return len(self.reads) == 2
+        return None if not self.Reads else len(self.Reads) == 2
 
     @property
     def is_single_end(self):
         """Return if the samples are single-end."""
-        if len(self.reads) == 0:
+        if len(self.Reads) == 0:
             return None
-        return len(self.reads) == 1
+        return len(self.Reads) == 1
 
     @property
     def samples(self):
@@ -363,23 +385,24 @@ class SampleSheet:
             section_match = header_pattern.match(line[0])
             if section_match:
                 section, *_ = section_match.groups()
-                section = section.lower()
+                section = section
 
-            elif section in ('header', 'settings'):
-                key, value, *_ = line
-                formatted_key = camel_case_to_snake_case(key)
+            elif section in ('Header', 'Settings'):
+                original_key, value, *_ = line
 
-                # ``object_attribute`` is either  self.header or self.settings.
+                formatted_key = re.sub(r'\s+', '_', original_key)
+
+                # ``object_attribute`` is either  self.Header or self.Settings.
                 object_attribute = getattr(self, section)
                 object_attribute.keys.append(formatted_key)
-                object_attribute._key_map[key] = formatted_key
+                object_attribute._key_map[formatted_key] = original_key
                 setattr(object_attribute, formatted_key, value)
 
-            elif section == 'reads':
+            elif section == 'Reads':
                 read_cycle, *_ = line
-                self.reads.append(int(read_cycle))
+                self.Reads.append(int(read_cycle))
 
-            elif section == 'data':
+            elif section == 'Data':
                 if sample_header is None:
                     sample_header = line
                     continue
@@ -401,9 +424,9 @@ class SampleSheet:
         ``SampleSheet`` will inherit the same ``read_structure`` attribute.
 
         Samples cannot be added if the following criteria is met:
-            - ``sample_id`` and ``sample_library`` combination exists
+            - ``Sample_ID`` and ``Sample_Library`` combination exists
             - ``index`` and/or ``index2`` combination exists
-            - Samplesheet.reads and Sample.read_structure are incompatible
+            - Samplesheet.reads and Sample.Read_Structure are incompatible
             - Sample does not have ``index`` defined but others do
             - Sample does not have ``index2`` defined but others do
             - If defined, sample ``read_structure`` is different than others
@@ -421,42 +444,42 @@ class SampleSheet:
 
         if (
             len(self.samples) == 0 and
-            sample.read_structure is not None and
-            self.read_structure is None
+            sample.Read_Structure is not None and
+            self.Read_Structure is None
         ):
             # If this is the first sample added to the sample sheet then
-            # assume the ``SampleSheet.read_structure`` inherits the
-            # ``sample.read_structure`` only if ``SampleSheet.read_structure``
+            # assume the ``SampleSheet.Read_Structure`` inherits the
+            # ``sample.Read_Structure`` only if ``SampleSheet.Read_Structure``
             # has not already been defined. If ``SampleSheet.reads`` has been
             # defined then validate the new read_structure against it.
             if (
-                self.is_paired_end and not sample.read_structure.is_paired_end or  # noqa
-                self.is_single_end and not sample.read_structure.is_single_end
+                self.is_paired_end and not sample.Read_Structure.is_paired_end or  # noqa
+                self.is_single_end and not sample.Read_Structure.is_single_end
             ):
                 raise ValueError(
                     f'Sample sheet pairing has been set with '
-                    f'Reads:"{self.reads}" and is not compatible with sample '
-                    f'read structure: {sample.read_structure}')
+                    f'Reads:"{self.Reads}" and is not compatible with sample '
+                    f'read structure: {sample.Read_Structure}')
 
             # Make a copy of this samples read_structure for the sample sheet.
-            self.read_structure = sample.read_structure.copy()
+            self.Read_Structure = sample.Read_Structure.copy()
 
-        # Validate this sample against the ``SampleSheet.read_structure``
+        # Validate this sample against the ``SampleSheet.Read_Structure``
         # attribute, which can be None, to ensure they are the same.
-        if self.read_structure != sample.read_structure:
+        if self.Read_Structure != sample.Read_Structure:
             raise ValueError(
-                f'Sample read structure ({sample.read_structure}) different '
-                f'than read structure in samplesheet ({self.read_structure}).')
+                f'Sample read structure ({sample.Read_Structure}) different '
+                f'than read structure in samplesheet ({self.Read_Structure}).')
 
         # Compare this sample against all those already defined to ensure none
-        # have equal ``sample_id`` or ``library_id`` attributes. Ensure that
+        # have equal ``Sample_ID`` or ``Library_ID`` attributes. Ensure that
         # all samples have attributes ``index``, ``index2`` or both. Check to
         # make sure this sample's index combination has not been added before.
         for other in self.samples:
             if sample == other:
                 raise ValueError(
-                    f'Cannot add two samples with the same ``sample_id`` and '
-                    f'``library_id``: sample - {sample}, other - {other}')
+                    f'Cannot add two samples with the same ``Sample_ID`` and '
+                    f'``Library_ID``: sample - {sample}, other - {other}')
             if sample.index is None and self.samples_have_index:
                 raise ValueError(
                     f'Cannot add a sample without attribute ``index`` if a '
@@ -503,15 +526,18 @@ class SampleSheet:
         Returns
         -------
         markdown : str or IPython.core.display.Markdown
-            Returns a rendered Markdown when not displayed in IPython.
+            A visual table of IDs and names for all samples in Markdown.
 
         """
-        if len(self.samples) == 0:
+        if not self.samples:
             raise ValueError('No samples in sample sheet')
 
-        header = ['sample_id', 'sample_name', 'library_id', 'description']
-        table = [[getattr(s, h, '') for h in header] for s in self._samples]
-        markdown = tabulate(table, headers=header, tablefmt='pipe')
+        header = ['Sample_ID', 'Sample_Name', 'Library_ID', 'Description']
+        markdown = tabulate(
+            [[getattr(s, h, '') for h in header] for s in self.samples],
+            headers=header,
+            tablefmt='pipe')
+
         if is_ipython_interpreter():
             from IPython.display import Markdown
             return Markdown(markdown)
@@ -541,8 +567,8 @@ class SampleSheet:
         The format of the BAM file output paths in the library parameter files
         are formatted as:
 
-            <bam_prefix>/<sample_name>.<sample_library>/
-                <sample_name>.<index><index2>.<lane>.bam
+            <bam_prefix>/<Sample_Name>.<Sample_Library>/
+                <Sample_Name>.<index><index2>.<lane>.bam
 
         Two files will be written to `directory` for all `lanes` specified. If
         the path to `directory` does not exist, it will be created.
@@ -570,11 +596,11 @@ class SampleSheet:
             raise ValueError('I7 indexes have differing lengths.')
         if len(set(len(sample.index2 or '') for sample in self.samples)) != 1:
             raise ValueError('I5 indexes have differing lengths.')
-        for attr in ('sample_name', 'library_id', 'index'):
+        for attr in ('Sample_Name', 'Library_ID', 'index'):
             if any(getattr(sample, attr) is None for sample in self.samples):
                 raise ValueError(
-                    'Samples must have at least `sample_name`, '
-                    '`sample_library`, and `index` attributes')
+                    'Samples must have at least `Sample_Name`, '
+                    '`Sample_Library`, and `index` attributes')
 
         # Make lanes iterable if only an int was provided.
         lanes = [lanes] if isinstance(lanes, int) else lanes
@@ -620,17 +646,17 @@ class SampleSheet:
                     # The long name of a sample is a combination of the sample
                     # ID and the sample library.
                     long_name = '.'.join([
-                        sample.sample_name,
-                        sample.library_id])
+                        sample.Sample_Name,
+                        sample.Library_ID])
 
                     # The barcode name is all sample indexes concatenated.
                     barcode_name = sample.index + (sample.index2 or '')
-                    library_name = sample.library_id or ''
+                    library_name = sample.Library_ID or ''
 
                     # Assemble the path to the future BAM file.
                     bam_file = (
                         bam_prefix / long_name /
-                        f'{sample.sample_name}.{barcode_name}.{lane}.bam')
+                        f'{sample.Sample_Name}.{barcode_name}.{lane}.bam')
 
                     # Use list splatting to build the contents of the library
                     # and barcodes parameter files.
@@ -644,9 +670,9 @@ class SampleSheet:
                         *([sample.index] if not self.samples_have_index2 else
                           [sample.index, sample.index2]),
                         bam_file,
-                        sample.sample_name,
-                        sample.library_id,
-                        sample.description or '']
+                        sample.Sample_Name,
+                        sample.Library_ID,
+                        sample.Description or '']
 
                     barcode_writer.writerow(map(str, barcode_line))
                     library_writer.writerow(map(str, library_line))
@@ -698,11 +724,11 @@ class SampleSheet:
 
     def _repr_tty_(self):
         """Return a summary of this sample sheet in a TTY compatible codec."""
-        header_description = ['sample_id', 'description']
+        header_description = ['Sample_ID', 'Description']
         header_samples = [
-            'sample_id',
-            'sample_name',
-            'library_id',
+            'Sample_ID',
+            'Sample_Name',
+            'Library_ID',
             'index',
             'index2']
 
@@ -713,19 +739,19 @@ class SampleSheet:
 
         # All key:value pairs found in the [Header] section.
         max_header_width = max(MIN_WIDTH, sample_desc.column_max_width(-1))
-        for key in self.header.keys:
-            if 'description' in key:
+        for key in self.Header.keys:
+            if 'Description' in key:
                 value = '\n'.join(wrap(
-                    getattr(self.header, key),
+                    getattr(self.Header, key),
                     max_header_width))
             else:
-                value = getattr(self.header, key)
+                value = getattr(self.Header, key)
             header.table_data.append([key, value])
 
         # All key:value pairs found in the [Settings] and [Reads] sections.
-        for key in self.settings.keys:
-            setting.table_data.append((key, getattr(self.settings, key) or ''))
-        setting.table_data.append(('reads', ', '.join(map(str, self.reads))))
+        for key in self.Settings.keys:
+            setting.table_data.append((key, getattr(self.Settings, key) or ''))
+        setting.table_data.append(('Reads', ', '.join(map(str, self.Reads))))
 
         # Descriptions are wrapped to the allowable space remaining.
         description_width = max(MIN_WIDTH, sample_desc.column_max_width(-1))
@@ -735,8 +761,8 @@ class SampleSheet:
                 [getattr(sample, title) or '' for title in header_samples])
             # Wrap and add the sample descrption
             sample_desc.table_data.append((
-                sample.sample_id,
-                '\n'.join(wrap(sample.description or '', description_width))))
+                sample.Sample_ID,
+                '\n'.join(wrap(sample.Description or '', description_width))))
 
         # These tables do not have horizontal headers so remove the frame.
         header.inner_heading_row_border = False
@@ -761,16 +787,3 @@ def is_ipython_interpreter():
         return True
     except (ImportError, NameError):
         return False
-
-
-def camel_case_to_snake_case(string):
-    """Convert a string in CamelCase format into snake_case.
-
-    Supports multiple capital letters in a row, numerals, and any amount of
-    whitespace.
-
-    """
-    grapheme_pattern = re.compile(r'((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))')
-    whitespace_pattern = re.compile(r'\s')
-    name = whitespace_pattern.sub('', grapheme_pattern.sub(r'_\1', string))
-    return name.lower()

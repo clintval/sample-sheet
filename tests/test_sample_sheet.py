@@ -55,7 +55,7 @@ class TestSampleSheet(TestCase):
         """Test init when no path is provided and path is None"""
         sample_sheet = SampleSheet()
         assert_is_none(sample_sheet.path)
-        assert_is_none(sample_sheet.read_structure)
+        assert_is_none(sample_sheet.Read_Structure)
         assert_is_none(sample_sheet.samples_have_index)
         assert_is_none(sample_sheet.samples_have_index2)
 
@@ -67,25 +67,25 @@ class TestSampleSheet(TestCase):
         """Test ``single_end`` property of ``SampleSheet``"""
         sample_sheet = SampleSheet()
         assert_is_none(sample_sheet.is_single_end)
-        sample_sheet.reads = [151]
+        sample_sheet.Reads = [151]
         assert_true(sample_sheet.is_single_end)
 
-        sample_sheet.reads = [151, 151]
+        sample_sheet.Reads = [151, 151]
         assert_false(sample_sheet.is_single_end)
 
     def test_is_paired_end(self):
         """Test ``paired_end`` property of ``SampleSheet``"""
         sample_sheet = SampleSheet()
         assert_is_none(sample_sheet.is_single_end)
-        sample_sheet.reads = [151]
+        sample_sheet.Reads = [151]
         assert_false(sample_sheet.is_paired_end)
 
-        sample_sheet.reads = [151, 151]
+        sample_sheet.Reads = [151, 151]
         assert_true(sample_sheet.is_paired_end)
 
     def test_add_sample(self):
         """Test adding a single simple sample to a sample sheet"""
-        sample = Sample({'sample_id': 49})
+        sample = Sample({'Sample_ID': 49})
         sample_sheet = SampleSheet()
 
         eq_(len(sample_sheet.samples), 0)
@@ -123,8 +123,8 @@ class TestSampleSheet(TestCase):
         different
 
         """
-        sample1 = Sample({'sample_id': 0, 'index': 'AGGTA', 'index2': 'AGGTA'})
-        sample2 = Sample({'sample_id': 1, 'index': 'AGGTA', 'index2': 'TTTTT'})
+        sample1 = Sample({'Sample_ID': 0, 'index': 'AGGTA', 'index2': 'AGGTA'})
+        sample2 = Sample({'Sample_ID': 1, 'index': 'AGGTA', 'index2': 'TTTTT'})
         sample_sheet = SampleSheet()
 
         sample_sheet.add_sample(sample1)
@@ -132,8 +132,8 @@ class TestSampleSheet(TestCase):
         assert_is_none(sample_sheet.add_sample(sample2))
 
     def test_add_sample_same_twice(self):
-        """Test ``add_sample()`` when two samples having the same ``sample_id``
-        and ``library_id`` are added.
+        """Test ``add_sample()`` when two samples having the same ``Sample_ID``
+        and ``Library_ID`` are added.
 
         """
         sample = Sample()
@@ -142,8 +142,8 @@ class TestSampleSheet(TestCase):
 
         assert_raises(ValueError, sample_sheet.add_sample, sample)
 
-        sample1 = Sample({'sample_id': 49, 'library_id': '234T'})
-        sample2 = Sample({'sample_id': 49, 'library_id': '234T'})
+        sample1 = Sample({'Sample_ID': 49, 'Library_ID': '234T'})
+        sample2 = Sample({'Sample_ID': 49, 'Library_ID': '234T'})
         sample_sheet = SampleSheet()
         sample_sheet.add_sample(sample1)
 
@@ -154,23 +154,23 @@ class TestSampleSheet(TestCase):
         sample sheet which indicate if the sample should be paired or not.
 
         """
-        sample = Sample({'sample_id': 23, 'read_structure': '151T'})
+        sample = Sample({'Sample_ID': 23, 'Read_Structure': '151T'})
         sample_sheet = SampleSheet()
-        sample_sheet.reads = [151, 151]
+        sample_sheet.Reads = [151, 151]
         assert_raises(ValueError, sample_sheet.add_sample, sample)
 
-        sample = Sample({'sample_id': 26, 'read_structure': '151T151T'})
+        sample = Sample({'Sample_ID': 26, 'Read_Structure': '151T151T'})
         sample_sheet = SampleSheet()
-        sample_sheet.reads = [151]
+        sample_sheet.Reads = [151]
         assert_raises(ValueError, sample_sheet.add_sample, sample)
 
     def test_add_sample_different_read_structure(self):
         """Test ``add_sample()`` when two samples having different
-        ``read_structure`` attributes are added.
+        ``Read_Structure`` attributes are added.
 
         """
-        sample1 = Sample({'sample_id': 49, 'read_structure': '115T'})
-        sample2 = Sample({'sample_id': 23, 'read_structure': '112T'})
+        sample1 = Sample({'Sample_ID': 49, 'Read_Structure': '115T'})
+        sample2 = Sample({'Sample_ID': 23, 'Read_Structure': '112T'})
         sample_sheet = SampleSheet()
         sample_sheet.add_sample(sample1)
 
@@ -178,8 +178,8 @@ class TestSampleSheet(TestCase):
 
     def test_add_sample_with_same_sample_index(self):
         """Test ``add_sample()`` when two samples have the same index."""
-        sample1 = Sample({'sample_id': 49, 'index': 'ACGGTN'})
-        sample2 = Sample({'sample_id': 23, 'index': 'ACGGTN'})
+        sample1 = Sample({'Sample_ID': 49, 'index': 'ACGGTN'})
+        sample2 = Sample({'Sample_ID': 23, 'index': 'ACGGTN'})
         sample_sheet = SampleSheet()
         sample_sheet.add_sample(sample1)
 
@@ -187,8 +187,8 @@ class TestSampleSheet(TestCase):
 
     def test_add_sample_with_same_sample_index_pair(self):
         """Test ``add_sample()`` when two samples have the same index pair."""
-        sample1 = Sample({'sample_id': 49, 'index': 'ACG', 'index2': 'TTTN'})
-        sample2 = Sample({'sample_id': 23, 'index': 'ACG', 'index2': 'TTTN'})
+        sample1 = Sample({'Sample_ID': 49, 'index': 'ACG', 'index2': 'TTTN'})
+        sample2 = Sample({'Sample_ID': 23, 'index': 'ACG', 'index2': 'TTTN'})
         sample_sheet = SampleSheet()
         sample_sheet.add_sample(sample1)
 
@@ -196,8 +196,8 @@ class TestSampleSheet(TestCase):
 
     def test_add_sample_with_missing_index(self):
         """Test ``add_sample()`` when a sample has a missing index."""
-        sample1 = Sample({'sample_id': 49, 'index': 'ACGTAC'})
-        sample2 = Sample({'sample_id': 23})
+        sample1 = Sample({'Sample_ID': 49, 'index': 'ACGTAC'})
+        sample2 = Sample({'Sample_ID': 23})
         sample_sheet = SampleSheet()
         sample_sheet.add_sample(sample1)
 
@@ -205,8 +205,8 @@ class TestSampleSheet(TestCase):
 
     def test_add_sample_with_different_index_combination(self):
         """Test ``add_sample()`` improper index combinations in samples."""
-        sample1 = Sample({'sample_id': 49, 'index2': 'ACGTAC'})
-        sample2 = Sample({'sample_id': 23, 'index': 'ACGGTN'})
+        sample1 = Sample({'Sample_ID': 49, 'index2': 'ACGTAC'})
+        sample2 = Sample({'Sample_ID': 23, 'index': 'ACGGTN'})
         sample_sheet = SampleSheet()
         sample_sheet.add_sample(sample1)
 
@@ -218,18 +218,18 @@ class TestSampleSheet(TestCase):
         assert_raises(ValueError, lambda: sample_sheet.experimental_design)
 
         sample1 = Sample({
-            'sample_id': 493,
-            'sample_name': '10x-FA',
+            'Sample_ID': 493,
+            'Sample_Name': '10x-FA',
             'index': 'ACGGTNT',
-            'library_id': 'exp001',
-            'description': 'A sentence!'}
+            'Library_ID': 'exp001',
+            'Description': 'A sentence!'}
         )
         sample2 = Sample({
-            'sample_id': 207,
-            'sample_name': '10x-FB',
+            'Sample_ID': 207,
+            'Sample_Name': '10x-FB',
             'index': 'TTGGTCT',
-            'library_id': 'exp001',
-            'description': 'One more!'}
+            'Library_ID': 'exp001',
+            'Description': 'One more!'}
         )
         sample_sheet.add_sample(sample1)
         sample_sheet.add_sample(sample2)
@@ -237,7 +237,7 @@ class TestSampleSheet(TestCase):
         assert_is_instance(design, str)
 
         table = (
-            '|   sample_id | sample_name   | library_id   | description   |\n'
+            '|   Sample_ID | Sample_Name   | Library_ID   | Description   |\n'
             '|------------:|:--------------|:-------------|:--------------|\n'
             '|         493 | 10x-FA        | exp001       | A sentence!   |\n'
             '|         207 | 10x-FB        | exp001       | One more!     |')
@@ -257,10 +257,10 @@ class TestSampleSheet(TestCase):
         """Test ``to_picard_basecalling_params()`` incorrect lane types."""
         with TemporaryDirectory() as temp_dir:
             sample = Sample({
-                'sample_id': 49,
-                'sample_name': '49-tissue',
-                'library_id': 'exp001',
-                'description': 'Lorum ipsum!',
+                'Sample_ID': 49,
+                'Sample_Name': '49-tissue',
+                'Library_ID': 'exp001',
+                'Description': 'Lorum ipsum!',
                 'index': 'GAACT',
                 'index2': 'AGTTC'})
             sample_sheet = SampleSheet()
@@ -278,7 +278,7 @@ class TestSampleSheet(TestCase):
         """Test ``to_picard_basecalling_params()`` required sample attrs."""
         with TemporaryDirectory() as temp_dir:
             sample_sheet = SampleSheet()
-            sample_sheet.add_sample(Sample({'sample_id': 23}))
+            sample_sheet.add_sample(Sample({'Sample_ID': 23}))
             assert_raises(
                 ValueError,
                 sample_sheet.to_picard_basecalling_params,
@@ -288,8 +288,8 @@ class TestSampleSheet(TestCase):
         """Test ``to_picard_basecalling_params()`` different index sizes."""
         with TemporaryDirectory() as temp_dir:
             sample_sheet = SampleSheet()
-            sample1 = Sample({'sample_id': 21, 'index': 'ACGT'})
-            sample2 = Sample({'sample_id': 22, 'index': 'ACG'})
+            sample1 = Sample({'Sample_ID': 21, 'index': 'ACGT'})
+            sample2 = Sample({'Sample_ID': 22, 'index': 'ACG'})
             sample_sheet.add_sample(sample1)
             sample_sheet.add_sample(sample2)
             assert_raises(
@@ -301,8 +301,8 @@ class TestSampleSheet(TestCase):
         """Test ``to_picard_basecalling_params()`` different index2 sizes."""
         with TemporaryDirectory() as temp_dir:
             sample_sheet = SampleSheet()
-            sample1 = Sample({'sample_id': 21, 'index2': 'ACGT'})
-            sample2 = Sample({'sample_id': 22, 'index2': 'ACG'})
+            sample1 = Sample({'Sample_ID': 21, 'index2': 'ACGT'})
+            sample2 = Sample({'Sample_ID': 22, 'index2': 'ACG'})
             sample_sheet.add_sample(sample1)
             sample_sheet.add_sample(sample2)
             assert_raises(
@@ -316,17 +316,17 @@ class TestSampleSheet(TestCase):
         lanes = [1, 2]
         with TemporaryDirectory() as temp_dir:
             sample1 = Sample({
-                'sample_id': 49,
-                'sample_name': '49-tissue',
-                'library_id': 'exp001',
-                'description': 'Lorum ipsum!',
+                'Sample_ID': 49,
+                'Sample_Name': '49-tissue',
+                'Library_ID': 'exp001',
+                'Description': 'Lorum ipsum!',
                 'index': 'GAACT',
                 'index2': 'AGTTC'})
             sample2 = Sample({
-                'sample_id': 23,
-                'sample_name': '23-tissue',
-                'library_id': 'exp001',
-                'description': 'Test description!',
+                'Sample_ID': 23,
+                'Sample_Name': '23-tissue',
+                'Library_ID': 'exp001',
+                'Description': 'Test description!',
                 'index': 'TGGGT',
                 'index2': 'ACCCA'})
 
@@ -366,7 +366,7 @@ class TestSampleSheet(TestCase):
 
     def test_iter(self):
         """Test ``__iter__()`` and ``__next__()``"""
-        fake1, fake2 = Sample({'sample_id': 1}), Sample({'sample_id': 2})
+        fake1, fake2 = Sample({'Sample_ID': 1}), Sample({'Sample_ID': 2})
         sample_sheet = SampleSheet()
         sample_sheet.add_sample(fake1)
         sample_sheet.add_sample(fake2)
@@ -376,7 +376,7 @@ class TestSampleSheet(TestCase):
 
     def test_len(self):
         """Test ``__len__()``"""
-        fake1, fake2 = Sample({'sample_id': 1}), Sample({'sample_id': 2})
+        fake1, fake2 = Sample({'Sample_ID': 1}), Sample({'Sample_ID': 2})
         sample_sheet = SampleSheet()
         eq_(len(sample_sheet), 0)
         sample_sheet.add_sample(fake1)
@@ -401,15 +401,15 @@ class TestSampleSheet(TestCase):
         source = '\n' + ''.join(decode_vt_100(sample_sheet._repr_tty_()))
         target = (
             '\n┌Header─────────────┬─────────────────────────────────┐'
-            '\n│ iem1_file_version │ 4                               │'
-            '\n│ investigator_name │ jdoe                            │'
-            '\n│ experiment_name   │ exp001                          │'
-            '\n│ date              │ 11/16/2017                      │'
-            '\n│ workflow          │ SureSelectXT                    │'
-            '\n│ application       │ NextSeq FASTQ Only              │'
-            '\n│ assay             │ SureSelectXT                    │'
-            '\n│ description       │ A description of this flow cell │'
-            '\n│ chemistry         │ Default                         │'
+            '\n│ IEM1_File_Version │ 4                               │'
+            '\n│ Investigator_Name │ jdoe                            │'
+            '\n│ Experiment_Name   │ exp001                          │'
+            '\n│ Date              │ 11/16/2017                      │'
+            '\n│ Workflow          │ SureSelectXT                    │'
+            '\n│ Application       │ NextSeq FASTQ Only              │'
+            '\n│ Assay             │ SureSelectXT                    │'
+            '\n│ Description       │ A description of this flow cell │'
+            '\n│ Chemistry         │ Default                         │'
             '\n└───────────────────┴─────────────────────────────────┘'
             '\n┌Settings──────────────────────┬──────────┐'
             '\n│ create_fastq_for_index_reads │ 1        │'
@@ -417,7 +417,7 @@ class TestSampleSheet(TestCase):
             '\n│ reads                        │ 151, 151 │'
             '\n└──────────────────────────────┴──────────┘'
             '\n┌Identifiers┬──────────────┬────────────┬──────────┬────────┐'
-            '\n│ sample_id │ sample_name  │ library_id │ index    │ index2 │'
+            '\n│ Sample_ID │ Sample_Name  │ Library_ID │ index    │ index2 │'
             '\n├───────────┼──────────────┼────────────┼──────────┼────────┤'
             '\n│ 1823A     │ 1823A-tissue │ 2017-01-20 │ GAATCTGA │        │'
             '\n│ 1823B     │ 1823B-tissue │ 2017-01-20 │ AGCAGGAA │        │'
@@ -428,7 +428,7 @@ class TestSampleSheet(TestCase):
             '\n│ 1829A     │ 1823B-tissue │ 2017-01-17 │ GATAGACA │        │'
             '\n└───────────┴──────────────┴────────────┴──────────┴────────┘'
             '\n┌Descriptions──────────────────┐'
-            '\n│ sample_id │ description      │'
+            '\n│ Sample_ID │ Description      │'
             '\n├───────────┼──────────────────┤'
             '\n│ 1823A     │ 0.5x treatment   │'
             '\n│ 1823B     │ 0.5x treatment   │'
