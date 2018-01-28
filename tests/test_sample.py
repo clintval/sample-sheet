@@ -8,6 +8,7 @@ from nose.tools import eq_
 from unittest import TestCase
 
 from sample_sheet import *  # Test import of __all__
+from sample_sheet._sample_sheet import RECOMMENDED_KEYS
 
 
 class TestSample(TestCase):
@@ -15,7 +16,7 @@ class TestSample(TestCase):
 
     def test_blank_init(self):
         """Test initialization with no parameters."""
-        for key in Sample()._recommended_keys:
+        for key in RECOMMENDED_KEYS:
             assert_is_none(getattr(Sample(), key))
 
     def test_default_getattr(self):
@@ -26,7 +27,7 @@ class TestSample(TestCase):
     def test_keys_on_blank_init(self):
         """Test that recommended keys exist on blank initialization."""
         sample = Sample()
-        assert_set_equal(sample.keys(), sample._recommended_keys)
+        assert_set_equal(sample.keys(), set(RECOMMENDED_KEYS))
 
     def test_add_key_value(self):
         """Test that new keys with have whitepsace converted to underscores."""

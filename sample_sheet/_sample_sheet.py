@@ -5,6 +5,7 @@ import re
 import sys
 
 from contextlib import ExitStack
+from itertools import chain, repeat, islice
 from pathlib import Path
 from textwrap import wrap
 
@@ -19,6 +20,8 @@ __all__ = [
 
 # The minimum column with of a detected TTY for wrapping text in CLI columns.
 MIN_WIDTH = 10
+
+RECOMMENDED_KEYS = ['Sample_ID', 'Sample_Name', 'index']
 
 # From the section "Character Encoding" in the Illumina format specification.
 #
@@ -201,7 +204,6 @@ class Sample:
         if mappable is None:
             mappable = dict()
 
-        self._recommended_keys = {'Sample_ID', 'Sample_Name', 'index'}
         self._other_keys = set()
 
         self._whitespace_pattern = re.compile(r'\s+')
@@ -209,7 +211,7 @@ class Sample:
         self._valid_index_value_pattern = re.compile(r'^[ACGTN]*$')
 
         # Default attributes for recommended keys are empty strings.
-        for key in self._recommended_keys:
+        for key in RECOMMENDED_KEYS:
             setattr(self, key, None)
 
         for key, value in mappable.items():
@@ -249,8 +251,8 @@ class Sample:
                 f'also: {self}')
 
     def keys(self):
-        """Return all public attributes to this ``Sample``."""
-        return self._recommended_keys.union(self._other_keys)
+        """Return all public attributes."""
+        return set(RECOMMENDED_KEYS).union(self._other_keys)
 
     def __getattr__(self, attr):
         """Return ``None`` if an attribute is undefined."""
@@ -263,8 +265,8 @@ class Sample:
             self.Library_ID == other.Library_ID)
 
     def __repr__(self):
-        """Show the constructor command used to initialize this object."""
-        args = {k: getattr(self, k) for k in sorted(self._recommended_keys)}
+        """Shows a simplified constructor command to initialize this object."""
+        args = {key: getattr(self, key) for key in RECOMMENDED_KEYS}
         args = args.__repr__().replace('\'', '"')
         return f'{self.__class__.__name__}({args})'
 
@@ -274,12 +276,38 @@ class Sample:
 
 class SampleSheetSection:
     def __init__(self):
-        self.keys = []
-        self._key_map = {}
+        self.__dict__['keys'] = []
+        self.__dict__['_key_map'] = {}
+
+    def add_attr(self, attr, value, name=None):
+        """Add an attribute to this class and optionally save an alternate key.
+
+
+        Parameters
+        ----------
+        attr : str
+            Any valid Python attribute name.
+        value : any
+            The attribute's value.
+        name : str, optional
+            An optional key with no restriction on formatting to be used as the
+            key any written ``SampleSheet``.
+
+        """
+        if re.search(r'\s+', attr):
+            raise ValueError('Attributes may not contain whitespace.')
+        setattr(self, attr, value)
+        self._key_map[attr] = name or attr
 
     def __getattr__(self, attr):
         """Return ``None`` If an attribute does not exist."""
         return self.__dict__.get(attr)
+
+    def __setattr__(self, attr, value):
+        """Save the keys to this object in the order they were assigned."""
+        self.keys.append(attr)
+        self._key_map[attr] = attr
+        self.__dict__[attr] = value
 
     def __eq__(self, other):
         """Sections are equivalent if their dictionaries are equivalent."""
@@ -327,7 +355,8 @@ class SampleSheet:
         self.samples_have_index = None
         self.samples_have_index2 = None
 
-        self.Header, self.Settings = Header(), Settings()
+        self.Header = Header()
+        self.Settings = Settings()
 
         if self.path:
             self._parse(self.path)
@@ -351,11 +380,51 @@ class SampleSheet:
             A configured ``csv.reader`` for iterating through the sample sheet.
 
         """
-        encoding = 'utf8'
-        string = smart_open(str(path)).read().decode(encoding)
+        string = smart_open(str(path)).read().decode('utf8')
+
+        if not any(code in map(ord, string) for code in VALID_ASCII_CODES):
+            raise ValueError('Sample sheet contains invalid characters.')
+
         handle = io.StringIO(string, newline='')
         reader = csv.reader(handle, skipinitialspace=True)
         return reader
+
+    @property
+    def all_sample_keys(self):
+        """Return the unique keys of all samples in this ``SampleSheet``."""
+        all_keys = set()
+        for sample in self:
+            all_keys.update(sample.keys())
+        return all_keys
+
+    @property
+    def experimental_design(self):
+        """Return a markdown summary of the samples on this sample sheet.
+
+        This property supports displaying rendered markdown only when running
+        within an IPython interpreter. If we are not running in an IPython
+        interpreter, then print out a nicely formatted ASCII table.
+
+        Returns
+        -------
+        markdown : str or IPython.core.display.Markdown
+            A visual table of IDs and names for all samples in Markdown.
+
+        """
+        if not self.samples:
+            raise ValueError('No samples in sample sheet')
+
+        header = ['Sample_ID', 'Sample_Name', 'Library_ID', 'Description']
+        markdown = tabulate(
+            [[getattr(s, h, '') for h in header] for s in self.samples],
+            headers=header,
+            tablefmt='pipe')
+
+        if is_ipython_interpreter():
+            from IPython.display import Markdown
+            return Markdown(markdown)
+        else:
+            return markdown
 
     @property
     def is_paired_end(self):
@@ -384,23 +453,19 @@ class SampleSheet:
 
             section_match = header_pattern.match(line[0])
             if section_match:
-                section, *_ = section_match.groups()
-                section = section
+                section = section_match.groups()[0]
 
             elif section in ('Header', 'Settings'):
+                # Get either self.Header or self.Settings and add the attribute
+                # with whitespace removed, saving the original name.
                 original_key, value, *_ = line
-
-                formatted_key = re.sub(r'\s+', '_', original_key)
-
-                # ``object_attribute`` is either  self.Header or self.Settings.
-                object_attribute = getattr(self, section)
-                object_attribute.keys.append(formatted_key)
-                object_attribute._key_map[formatted_key] = original_key
-                setattr(object_attribute, formatted_key, value)
+                getattr(self, section).add_attr(
+                    attr=re.sub(r'\s+', '_', original_key),
+                    value=value,
+                    name=original_key)
 
             elif section == 'Reads':
-                read_cycle, *_ = line
-                self.Reads.append(int(read_cycle))
+                self.Reads.append(int(line[0]))
 
             elif section == 'Data':
                 if sample_header is None:
@@ -413,8 +478,6 @@ class SampleSheet:
                         '{}'.format(line))
 
                 self.add_sample(Sample(dict(zip(sample_header, line))))
-            else:
-                pass
 
     def add_sample(self, sample):
         """Validate and add a ``Sample`` to this ``SampleSheet``.
@@ -437,8 +500,8 @@ class SampleSheet:
             Sample to add to this sample sheet.
 
         """
+        # Set whether the samples will have ``index ``or ``index2``.
         if len(self.samples) == 0:
-            # Set whether the samples will have ``index ``or ``index2``.
             self.samples_have_index = sample.index is not None
             self.samples_have_index2 = sample.index2 is not None
 
@@ -515,34 +578,10 @@ class SampleSheet:
 
         self._samples.append(sample)
 
-    @property
-    def experimental_design(self):
-        """Return a markdown summary of the samples on this sample sheet.
-
-        This property supports displaying rendered markdown only when running
-        within an IPython interpreter. If we are not running in an IPython
-        interpreter, then print out a nicely formatted ASCII table.
-
-        Returns
-        -------
-        markdown : str or IPython.core.display.Markdown
-            A visual table of IDs and names for all samples in Markdown.
-
-        """
-        if not self.samples:
-            raise ValueError('No samples in sample sheet')
-
-        header = ['Sample_ID', 'Sample_Name', 'Library_ID', 'Description']
-        markdown = tabulate(
-            [[getattr(s, h, '') for h in header] for s in self.samples],
-            headers=header,
-            tablefmt='pipe')
-
-        if is_ipython_interpreter():
-            from IPython.display import Markdown
-            return Markdown(markdown)
-        else:
-            return markdown
+    def add_samples(self, samples):
+        """Add samples in an iterable to this ``SampleSheet``."""
+        for sample in samples:
+            self.add_sample(sample)
 
     def to_picard_basecalling_params(self, directory, bam_prefix, lanes):
         """Writes sample and library information to a set of files for a given
@@ -689,12 +728,68 @@ class SampleSheet:
                     '']
                 library_writer.writerow(map(str, library_line))
 
+    def write(self, handle, blank_lines=1):
+        """Write this ``SampleSheet`` to a file.
+
+        Parameters
+        ----------
+        handle : file-like object
+            Object to wrap by csv.writer.
+        blank_lines : int
+            Number of blank lines to write between sections.
+
+        """
+        writer = csv.writer(handle)
+        csv_width = max(len(RECOMMENDED_KEYS), len(self.all_sample_keys))
+
+        if not isinstance(blank_lines, int) or blank_lines <= 0:
+            raise ValueError('Number of blank lines must be a positive int.')
+
+        def pad_iterable(iterable, size=csv_width, padding=''):
+            return list(islice(chain(iterable, repeat(padding)), size))
+
+        def write_blank_lines(writer, n=blank_lines, width=csv_width):
+            for i in range(n):
+                writer.writerow(pad_iterable([], width))
+
+        # [Header]
+        writer.writerow(pad_iterable(['[Header]'], csv_width))
+        for attribute in self.Header.keys:
+            key = self.Header._key_map[attribute]
+            value = getattr(self.Header, attribute)
+            writer.writerow(pad_iterable([key, value], csv_width))
+        write_blank_lines(writer)
+
+        # [Reads]
+        writer.writerow(pad_iterable(['[Reads]'], csv_width))
+        for read in self.Reads:
+            writer.writerow(pad_iterable([read], csv_width))
+        write_blank_lines(writer)
+
+        # [Settings]
+        writer.writerow(pad_iterable(['[Settings]'], csv_width))
+        for attribute in self.Settings.keys:
+            key = self.Settings._key_map[attribute]
+            value = getattr(self.Settings, attribute)
+            writer.writerow(pad_iterable([key, value], csv_width))
+        write_blank_lines(writer)
+
+        # [Data]
+        writer.writerow(pad_iterable(['[Data]'], csv_width))
+        other_keys = self.all_sample_keys - set(RECOMMENDED_KEYS)
+        samples_header = RECOMMENDED_KEYS + sorted(other_keys)
+        writer.writerow(pad_iterable(samples_header, csv_width))
+
+        for sample in self.samples:
+            line = [getattr(sample, key) for key in samples_header]
+            writer.writerow(pad_iterable(line, csv_width))
+
     def __len__(self):
         """Return the number of samples on this ``SampleSheet``."""
         return len(self.samples)
 
     def __iter__(self):
-        """Iterating over a ``SampleSheet`` will emit it's samples."""
+        """Iterating over a ``SampleSheet`` will emit its samples."""
         self._iter = iter(self.samples)
         return self._iter
 
@@ -703,12 +798,12 @@ class SampleSheet:
         return next(self._iter)
 
     def __repr__(self):
-        """Show the constructor command used to initialize this object."""
+        """Show the constructor command to initialize this object."""
         path = f'"{self.path}"' if self.path else 'None'
         return f'{self.__class__.__name__}({path})'
 
     def __str__(self):
-        """Prints a summary representation of this sample sheet.
+        """Prints a summary representation of this ``SampleSheet``.
 
         If the ``__str__()`` method is called on a device that identifies as a
         TTY then render a TTY compatible representation. If no TTY is detected

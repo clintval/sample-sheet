@@ -5,6 +5,7 @@ from nose.tools import assert_raises
 from nose.tools import assert_true
 from nose.tools import eq_
 
+from io import StringIO
 from itertools import groupby
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -94,6 +95,17 @@ class TestSampleSheet(TestCase):
 
         eq_(len(sample_sheet.samples), 1)
         eq_(sample_sheet.samples[0], sample)
+
+    def test_add_samples(self):
+        """Test adding multiple simple samples to a sample sheet"""
+        sample1 = Sample({'Sample_ID': 49})
+        sample2 = Sample({'Sample_ID': 50})
+
+        sample_sheet = SampleSheet()
+        sample_sheet.add_samples([sample1, sample2])
+
+        eq_(len(sample_sheet.samples), 2)
+        eq_(sample_sheet.samples[0], sample1)
 
     def test_add_sample_with_index(self):
         """Test that the SampleSheet sets a sample with attribute ``index``"""
@@ -185,6 +197,15 @@ class TestSampleSheet(TestCase):
 
         assert_raises(ValueError, sample_sheet.add_sample, sample2)
 
+    def test_add_sample_with_same_sample_index2(self):
+        """Test ``add_sample()`` when two samples have the same index."""
+        sample1 = Sample({'Sample_ID': 49, 'index2': 'ACGGTN'})
+        sample2 = Sample({'Sample_ID': 23, 'index2': 'ACGGTN'})
+        sample_sheet = SampleSheet()
+        sample_sheet.add_sample(sample1)
+
+        assert_raises(ValueError, sample_sheet.add_sample, sample2)
+
     def test_add_sample_with_same_sample_index_pair(self):
         """Test ``add_sample()`` when two samples have the same index pair."""
         sample1 = Sample({'Sample_ID': 49, 'index': 'ACG', 'index2': 'TTTN'})
@@ -211,6 +232,17 @@ class TestSampleSheet(TestCase):
         sample_sheet.add_sample(sample1)
 
         assert_raises(ValueError, sample_sheet.add_sample, sample2)
+
+    def test_all_sample_keys(self):
+        """Test ``all_sample_keys()`` to return set of all sample keys."""
+        sample1 = Sample({'Sample_ID': 49, 'Key1': 1})
+        sample2 = Sample({'Sample_ID': 23, 'Key2': 2})
+        sample_sheet = SampleSheet()
+        sample_sheet.add_sample(sample1)
+        sample_sheet.add_sample(sample2)
+
+        eq_(sample_sheet.all_sample_keys,
+            {'Sample_ID', 'Sample_Name', 'index', 'Key1', 'Key2'})
 
     def test_experiment_design_plain_text(self):
         """Test ``experimental_design()`` plain text output"""
@@ -363,6 +395,19 @@ class TestSampleSheet(TestCase):
             self.assertMultiLineEqual(
                 (prefix / 'library_params.2.txt').read_text(),
                 library_params.format(lane=2))
+
+    def test_write(self):
+        """Test ``write()`` by comparing a roundtrip of a sample sheet"""
+        infile = './tests/resources/paired-end-single-index.csv'
+        sample_sheet = SampleSheet(infile)
+
+        string_handle = StringIO(newline=None)
+        sample_sheet.write(string_handle)
+
+        string_handle.seek(0)
+
+        with open(infile, 'r', newline='\n', encoding='utf-8') as file_handle:
+            self.assertMultiLineEqual(string_handle.read(), file_handle.read())
 
     def test_iter(self):
         """Test ``__iter__()`` and ``__next__()``"""

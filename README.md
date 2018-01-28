@@ -39,7 +39,7 @@
 A sample sheet can be read from S3, HDFS, WebHDFS, HTTP as well as local (compressed or not).
 
 ```python
->>> from sample_sheet import SampleSheet
+>>> from sample_sheet import SampleSheet 
 >>> SampleSheet('s3://bucket/prefix/SampleSheet.csv')
 SampleSheet("s3://bucket/prefix/SampleSheet.csv")
 ```
@@ -48,9 +48,9 @@ An example sample sheet can be found at [`tests/resources/paired-end-single-inde
 
 ```python
 >>> from sample_sheet import SampleSheet
-
->>> url = 'https://raw.githubusercontent.com/clintval/sample-sheet/master/tests/resources/{}'
->>> sample_sheet = SampleSheet(url.format('paired-end-single-index.csv'))
+>>>
+>>> url = 'https://raw.githubusercontent.com/clintval/sample-sheet/master/tests/resources/paired-end-single-index.csv'
+>>> sample_sheet = SampleSheet(url)
 ```
 
 The metadata of the sample sheet can be accessed with the `Header`, `Reads` and, `Settings` attributes:
@@ -58,10 +58,13 @@ The metadata of the sample sheet can be accessed with the `Header`, `Reads` and,
 ```python
 >>> sample_sheet.header.Assay
 'SureSelectXT'
+
 >>> sample_sheet.Reads
 [151, 151]
+
 >>> sample_sheet.is_paired_end
 True
+
 >>> sample_sheet.Settings.BarcodeMismatches
 '2'
 ```
@@ -79,10 +82,71 @@ The samples can be accessed directly or _via_ iteration:
  Sample({"Sample_ID": "1829A", "Sample_Name": "1823B-tissue", "index": "GATAGACA"})]
 
 >>> for sample in sample_sheet:
->>>     print(repr(sample))
+>>>     print(sample)
 >>>     break
-Sample({"Sample_ID": "1823A", "Sample_Name": "1823A-tissue", "index": "GAATCTGA"})
+"1823A"
 ```
+
+If a column labeled `Read_Structure` is provided _per_ sample, then additional functionality is enabled.
+
+```python
+>>> first_sample, *_ = sample_sheet.samples
+>>> first_sample.Read_Structure
+ReadStructure(structure="151T8B151T")
+
+>>> first_sample.Read_Structure.total_cycles
+310
+
+>>> first_sample.Read_Structure.tokens
+['151T', '8B', '151T']
+```
+
+#### Sample Sheet Creation
+
+Sample sheets can be created _de novo_ and written to a file-like object:
+
+```python
+>>> sample_sheet = SampleSheet()
+>>>
+>>> sample_sheet.Header.IEM4FileVersion = 4
+>>> sample_sheet.Header.add_attr(
+>>>     attr='Investigator_Name',
+>>>     value='jdoe',
+>>>     name='Investigator Name')
+>>>
+>>> sample_sheet.Settings.CreateFastqForIndexReads = 1
+>>> sample_sheet.Settings.BarcodeMismatches = 2
+>>>
+>>> sample_sheet.Reads = [151, 151]
+>>>
+>>> sample = Sample(dict(
+>>>     Sample_ID='1823A',
+>>>     Sample_Name='1823A-tissue',
+>>>     index='ACGT'))
+>>>
+>>> sample_sheet.add_sample(sample)
+>>>
+>>> import sys
+>>> sample_sheet.write(sys.stdout)
+"""
+[Header],,
+IEM4FileVersion,4,
+Investigator Name,jdoe,
+,,
+[Reads],,
+151,,
+151,,
+,,
+[Settings],,
+BarcodeMismatches,2,
+,,
+[Data],,
+Sample_ID,Sample_Name,index
+1823A,1823A-tissue,ACGT
+"""
+```
+
+#### IPython Integration
 
 A quick summary of the samples can be displayed in Markdown ASCII or HTML rendered Markdown if run in an IPython environment:
 
@@ -101,18 +165,6 @@ A quick summary of the samples can be displayed in Markdown ASCII or HTML render
 """
 ```
 
-If a column labeled `Read_Structure` is provided _per_ sample, then additional functionality is enabled.
-
-```python
->>> first_sample, *_ = sample_sheet.samples
->>> first_sample.Read_Structure
-ReadStructure(structure="151T8B151T")
->>> first_sample.Read_Structure.total_cycles
-310
->>> first_sample.Read_Structure.tokens
-['151T', '8B', '151T']
-```
-
 <br>
 
 <h3 align="center">Command Line Utility</h3>
@@ -122,7 +174,7 @@ Prints a tabular summary of the sample sheet.
 ```bash
 ❯ sample-sheet summary paired-end-single-index.csv
 ┌Header─────────────┬─────────────────────────────────┐
-│ IEM1_File_Version │ 4                               │
+│ IEM1FileVersion   │ 4                               │
 │ Investigator_Name │ jdoe                            │
 │ Experiment_Name   │ exp001                          │
 │ Date              │ 11/16/2017                      │
@@ -138,7 +190,7 @@ Prints a tabular summary of the sample sheet.
 │ Reads                    │ 151, 151 │
 └──────────────────────────┴──────────┘
 ┌Identifiers┬──────────────┬────────────┬──────────┬────────┐
-│ Sample_Id │ Sample_Name  │ Library_id │ index    │ index2 │
+│ Sample_ID │ Sample_Name  │ Library_ID │ index    │ index2 │
 ├───────────┼──────────────┼────────────┼──────────┼────────┤
 │ 1823A     │ 1823A-tissue │ 2017-01-20 │ GAATCTGA │        │
 │ 1823B     │ 1823B-tissue │ 2017-01-20 │ AGCAGGAA │        │
@@ -149,7 +201,7 @@ Prints a tabular summary of the sample sheet.
 │ 1829A     │ 1823B-tissue │ 2017-01-17 │ GATAGACA │        │
 └───────────┴──────────────┴────────────┴──────────┴────────┘
 ┌Descriptions──────────────────┐
-│ Sample_id │ Description      │
+│ Sample_ID │ Description      │
 ├───────────┼──────────────────┤
 │ 1823A     │ 0.5x treatment   │
 │ 1823B     │ 0.5x treatment   │
