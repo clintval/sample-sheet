@@ -39,7 +39,7 @@
 A sample sheet can be read from S3, HDFS, WebHDFS, HTTP as well as local (compressed or not).
 
 ```python
->>> from sample_sheet import SampleSheet
+>>> from sample_sheet import SampleSheet 
 >>> SampleSheet('s3://bucket/prefix/SampleSheet.csv')
 SampleSheet("s3://bucket/prefix/SampleSheet.csv")
 ```
@@ -48,21 +48,24 @@ An example sample sheet can be found at [`tests/resources/paired-end-single-inde
 
 ```python
 >>> from sample_sheet import SampleSheet
-
->>> url = 'https://raw.githubusercontent.com/clintval/sample-sheet/master/tests/resources/{}'
->>> sample_sheet = SampleSheet(url.format('paired-end-single-index.csv'))
+>>>
+>>> url = 'https://raw.githubusercontent.com/clintval/sample-sheet/master/tests/resources/paired-end-single-index.csv'
+>>> sample_sheet = SampleSheet(url)
 ```
 
-The metadata of the sample sheet can be accessed with the `header`, `reads` and, `settings` attributes:
+The metadata of the sample sheet can be accessed with the `Header`, `Reads` and, `Settings` attributes:
 
 ```python
->>> sample_sheet.header.assay
+>>> sample_sheet.header.Assay
 'SureSelectXT'
->>> sample_sheet.reads
+
+>>> sample_sheet.Reads
 [151, 151]
->>> sample_sheet.is_paired
+
+>>> sample_sheet.is_paired_end
 True
->>> sample_sheet.settings.barcode_mismatches
+
+>>> sample_sheet.Settings.BarcodeMismatches
 '2'
 ```
 
@@ -70,26 +73,87 @@ The samples can be accessed directly or _via_ iteration:
 
 ```python
 >>> sample_sheet.samples
-[Sample({"index": "GAATCTGA", "sample_id": "1823A", "sample_name": "1823A-tissue"}),
- Sample({"index": "AGCAGGAA", "sample_id": "1823B", "sample_name": "1823B-tissue"}),
- Sample({"index": "GAGCTGAA", "sample_id": "1824A", "sample_name": "1824A-tissue"}),
- Sample({"index": "AAACATCG", "sample_id": "1825A", "sample_name": "1825A-tissue"}),
- Sample({"index": "GAGTTAGC", "sample_id": "1826A", "sample_name": "1826A-tissue"}),
- Sample({"index": "CGAACTTA", "sample_id": "1826B", "sample_name": "1823A-tissue"}),
- Sample({"index": "GATAGACA", "sample_id": "1829A", "sample_name": "1823B-tissue"})]
+[Sample({"Sample_ID": "1823A", "Sample_Name": "1823A-tissue", "index": "GAATCTGA"}),
+ Sample({"Sample_ID": "1823B", "Sample_Name": "1823B-tissue", "index": "AGCAGGAA"}),
+ Sample({"Sample_ID": "1824A", "Sample_Name": "1824A-tissue", "index": "GAGCTGAA"}),
+ Sample({"Sample_ID": "1825A", "Sample_Name": "1825A-tissue", "index": "AAACATCG"}),
+ Sample({"Sample_ID": "1826A", "Sample_Name": "1826A-tissue", "index": "GAGTTAGC"}),
+ Sample({"Sample_ID": "1826B", "Sample_Name": "1823A-tissue", "index": "CGAACTTA"}),
+ Sample({"Sample_ID": "1829A", "Sample_Name": "1823B-tissue", "index": "GATAGACA"})]
 
 >>> for sample in sample_sheet:
->>>     print(repr(sample))
+>>>     print(sample)
 >>>     break
-Sample({"index": "GAATCTGA", "sample_id": "1823A", "sample_name": "1823A-tissue"})
+"1823A"
 ```
+
+If a column labeled `Read_Structure` is provided _per_ sample, then additional functionality is enabled.
+
+```python
+>>> first_sample, *_ = sample_sheet.samples
+>>> first_sample.Read_Structure
+ReadStructure(structure="151T8B151T")
+
+>>> first_sample.Read_Structure.total_cycles
+310
+
+>>> first_sample.Read_Structure.tokens
+['151T', '8B', '151T']
+```
+
+#### Sample Sheet Creation
+
+Sample sheets can be created _de novo_ and written to a file-like object:
+
+```python
+>>> sample_sheet = SampleSheet()
+>>>
+>>> sample_sheet.Header.IEM4FileVersion = 4
+>>> sample_sheet.Header.add_attr(
+>>>     attr='Investigator_Name',
+>>>     value='jdoe',
+>>>     name='Investigator Name')
+>>>
+>>> sample_sheet.Settings.CreateFastqForIndexReads = 1
+>>> sample_sheet.Settings.BarcodeMismatches = 2
+>>>
+>>> sample_sheet.Reads = [151, 151]
+>>>
+>>> sample = Sample(dict(
+>>>     Sample_ID='1823A',
+>>>     Sample_Name='1823A-tissue',
+>>>     index='ACGT'))
+>>>
+>>> sample_sheet.add_sample(sample)
+>>>
+>>> import sys
+>>> sample_sheet.write(sys.stdout)
+"""
+[Header],,
+IEM4FileVersion,4,
+Investigator Name,jdoe,
+,,
+[Reads],,
+151,,
+151,,
+,,
+[Settings],,
+BarcodeMismatches,2,
+,,
+[Data],,
+Sample_ID,Sample_Name,index
+1823A,1823A-tissue,ACGT
+"""
+```
+
+#### IPython Integration
 
 A quick summary of the samples can be displayed in Markdown ASCII or HTML rendered Markdown if run in an IPython environment:
 
 ```python
 >>> sample_sheet.experimental_design
 """
-| sample_id   | sample_name   | library_id   | description      |
+| Sample_ID   | Sample_Name   | Library_ID   | Description      |
 |:------------|:--------------|:-------------|:-----------------|
 | 1823A       | 1823A-tissue  | 2017-01-20   | 0.5x treatment   |
 | 1823B       | 1823B-tissue  | 2017-01-20   | 0.5x treatment   |
@@ -101,18 +165,6 @@ A quick summary of the samples can be displayed in Markdown ASCII or HTML render
 """
 ```
 
-If a column name for read structure can be inferred, then additional functionality is enabled.
-
-```python
->>> first_sample, *_ = sample_sheet.samples
->>> first_sample.read_structure
-ReadStructure(structure="151T8B151T")
->>> first_sample.read_structure.total_cycles
-310
->>> first_sample.read_structure.tokens
-['151T', '8B', '151T']
-```
-
 <br>
 
 <h3 align="center">Command Line Utility</h3>
@@ -122,23 +174,23 @@ Prints a tabular summary of the sample sheet.
 ```bash
 ❯ sample-sheet summary paired-end-single-index.csv
 ┌Header─────────────┬─────────────────────────────────┐
-│ iem1_file_version │ 4                               │
-│ investigator_name │ jdoe                            │
-│ experiment_name   │ exp001                          │
-│ date              │ 11/16/2017                      │
-│ workflow          │ SureSelectXT                    │
-│ application       │ NextSeq FASTQ Only              │
-│ assay             │ SureSelectXT                    │
-│ description       │ A description of this flow cell │
-│ chemistry         │ Default                         │
+│ IEM1FileVersion   │ 4                               │
+│ Investigator_Name │ jdoe                            │
+│ Experiment_Name   │ exp001                          │
+│ Date              │ 11/16/2017                      │
+│ Workflow          │ SureSelectXT                    │
+│ Application       │ NextSeq FASTQ Only              │
+│ Assay             │ SureSelectXT                    │
+│ Description       │ A description of this flow cell │
+│ Chemistry         │ Default                         │
 └───────────────────┴─────────────────────────────────┘
-┌Settings──────────────────────┬──────────┐
-│ create_fastq_for_index_reads │ 1        │
-│ barcode_mismatches           │ 2        │
-│ reads                        │ 151, 151 │
-└──────────────────────────────┴──────────┘
+┌Settings──────────────────┬──────────┐
+│ CreateFastqForIndexReads │ 1        │
+│ BarcodeMismatches        │ 2        │
+│ Reads                    │ 151, 151 │
+└──────────────────────────┴──────────┘
 ┌Identifiers┬──────────────┬────────────┬──────────┬────────┐
-│ sample_id │ sample_name  │ library_id │ index    │ index2 │
+│ Sample_ID │ Sample_Name  │ Library_ID │ index    │ index2 │
 ├───────────┼──────────────┼────────────┼──────────┼────────┤
 │ 1823A     │ 1823A-tissue │ 2017-01-20 │ GAATCTGA │        │
 │ 1823B     │ 1823B-tissue │ 2017-01-20 │ AGCAGGAA │        │
@@ -149,7 +201,7 @@ Prints a tabular summary of the sample sheet.
 │ 1829A     │ 1823B-tissue │ 2017-01-17 │ GATAGACA │        │
 └───────────┴──────────────┴────────────┴──────────┴────────┘
 ┌Descriptions──────────────────┐
-│ sample_id │ description      │
+│ Sample_ID │ Description      │
 ├───────────┼──────────────────┤
 │ 1823A     │ 0.5x treatment   │
 │ 1823B     │ 0.5x treatment   │
