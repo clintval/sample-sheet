@@ -2,8 +2,6 @@ from nose.tools import assert_is_none, eq_
 
 from unittest import TestCase
 
-from sample_sheet._sample_sheet import Header
-from sample_sheet._sample_sheet import Settings
 from sample_sheet._sample_sheet import SampleSheet
 from sample_sheet._sample_sheet import SampleSheetSection
 
@@ -37,19 +35,3 @@ class TestSampleSheetSection(TestCase):
     def test_repr(self):
         """Test ``__repr__()``"""
         eq_(SampleSheetSection().__repr__(), 'SampleSheetSection')
-
-
-class TestHeader:
-    """Unit Test for ``Header``"""
-
-    def test_repr(self):
-        """Test ``__repr__()``"""
-        eq_(Header().__repr__(), 'Header')
-
-
-class TestSettings:
-    """Unit Test for ``Settings``"""
-
-    def test_repr(self):
-        """Test ``__repr__()``"""
-        eq_(Settings().__repr__(), 'Settings')

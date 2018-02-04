@@ -24,7 +24,7 @@ setup(
     py_modules=['sample_sheet'],
     install_requires=[
         'click',
-        'smart_open',
+        'smart_open>=1.5.4',
         'tabulate',
         'terminaltables',
     ],
