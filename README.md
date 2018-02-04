@@ -239,7 +239,7 @@ To make a development install:
 To run the tests:
 
 ```
-❯ ./sample-sheet/run-tests
+❯ ./sample-sheet/tests/run-tests
 Name                            Stmts   Miss  Cover
 ---------------------------------------------------
 sample_sheet/__init__.py            1      0   100%

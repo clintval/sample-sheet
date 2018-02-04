@@ -1,7 +1,7 @@
 import csv
-import io
 import os
 import re
+import string
 import sys
 
 from contextlib import ExitStack
@@ -28,12 +28,11 @@ RECOMMENDED_KEYS = ['Sample_ID', 'Sample_Name', 'index']
 # https://www.illumina.com/content/dam/illumina-marketing/
 #     documents/products/technotes/
 #     sequencing-sheet-format-specifications-technical-note-970-2017-004.pdf
-VALID_ASCII_CODES = [
-    10,
-    13,
-    32,
-    *list(range(33, 47)),
-    *list(range(48, 127))]
+VALID_ASCII = set(
+    string.ascii_letters +
+    string.digits +
+    string.punctuation +
+    ' \n\r')
 
 
 class ReadStructure:
@@ -206,7 +205,7 @@ class Sample:
 
         self._other_keys = set()
 
-        self._whitespace_pattern = re.compile(r'\s+')
+        self._whitespace_re = re.compile(r'\s+')
         self._valid_index_key_pattern = re.compile(r'index2?')
         self._valid_index_value_pattern = re.compile(r'^[ACGTN]*$')
 
@@ -216,7 +215,7 @@ class Sample:
 
         for key, value in mappable.items():
             # Convert whitepsace to a single underscore.
-            key = self._whitespace_pattern.sub('_', key)
+            key = self._whitespace_re.sub('_', key)
             self._other_keys.add(key)
 
             # Promote a ``Read_Structure`` key to ``ReadStructure``.
@@ -227,7 +226,7 @@ class Sample:
                 self._valid_index_key_pattern.match(key) and
                 not bool(self._valid_index_value_pattern.match(value))
             ):
-                raise ValueError('Not a valid index: {}'.format(value))
+                raise ValueError(f'Not a valid index: {value}')
 
             setattr(self, key, value)
 
@@ -256,7 +255,7 @@ class Sample:
 
     def __getattr__(self, attr):
         """Return ``None`` if an attribute is undefined."""
-        return self.__dict__.get(attr, None)
+        return self.__dict__.get(attr)
 
     def __eq__(self, other):
         """Samples are equal if ``Sample_ID`` and ``Library_ID`` are equal."""
@@ -295,7 +294,7 @@ class SampleSheetSection:
 
         """
         if re.search(r'\s+', attr):
-            raise ValueError('Attributes may not contain whitespace.')
+            raise ValueError('Attributes may not contain whitespace')
         setattr(self, attr, value)
         self._key_map[attr] = name or attr
 
@@ -317,14 +316,6 @@ class SampleSheetSection:
         return f'{self.__class__.__name__}'
 
 
-class Header(SampleSheetSection):
-    pass
-
-
-class Settings(SampleSheetSection):
-    pass
-
-
 class SampleSheet:
     """A representation of an Illumina sample sheet.
 
@@ -344,50 +335,25 @@ class SampleSheet:
         Any path supported by ``pathlib.Path`` and ``smart_open``.
 
     """
+    _encoding = 'utf8'
+    _section_header_re = re.compile(r'\[(.*)\]')
+    _whitespace_re = re.compile(r'\s+')
 
     def __init__(self, path=None):
+        self.path = path
+
         self._samples = []
 
-        self.path = path
         self.Reads = []
-
         self.Read_Structure = None
         self.samples_have_index = None
         self.samples_have_index2 = None
 
-        self.Header = Header()
-        self.Settings = Settings()
+        self.Header = SampleSheetSection()
+        self.Settings = SampleSheetSection()
 
         if self.path:
-            self._parse(self.path)
-
-    @staticmethod
-    def _make_csv_reader(path):
-        """Return a ``csv.reader`` for a filepath.
-
-        This helper method is required since ``smart_open.smart_open`` cannot
-        decode to "utf8" on-the-fly. Instead, the path is opened, read,
-        decoded, and then wrapped in a new handle for ``csv.reader``.
-
-        Parameters
-        ----------
-        path : str or pathlib.Path
-            Any path supported by ``pathlib.Path`` and ``smart_open``.
-
-        Returns
-        -------
-        reader : csv.reader
-            A configured ``csv.reader`` for iterating through the sample sheet.
-
-        """
-        string = smart_open(str(path)).read().decode('utf8')
-
-        if not any(code in map(ord, string) for code in VALID_ASCII_CODES):
-            raise ValueError('Sample sheet contains invalid characters.')
-
-        handle = io.StringIO(string, newline='')
-        reader = csv.reader(handle, skipinitialspace=True)
-        return reader
+            self._parse(str(self.path))
 
     @property
     def all_sample_keys(self):
@@ -434,50 +400,61 @@ class SampleSheet:
     @property
     def is_single_end(self):
         """Return if the samples are single-end."""
-        if len(self.Reads) == 0:
-            return None
-        return len(self.Reads) == 1
+        return None if not self.Reads else len(self.Reads) == 1
 
     @property
     def samples(self):
-        """Return the samples present on this ``SampleSheet``."""
+        """Return the samples present in this ``SampleSheet``."""
         return self._samples
 
     def _parse(self, path):
         section = sample_header = None
-        header_pattern = re.compile(r'\[(.*)\]')
 
-        for line in self._make_csv_reader(path):
-            if all(field.strip() == '' for field in line):
-                continue   # Skip all blank lines
+        with smart_open(path, encoding=self._encoding) as handle:
+            for i, line in enumerate(csv.reader(
+                handle,
+                skipinitialspace=True)
+            ):
+                if (
+                    any(character not in VALID_ASCII
+                        for character in set(''.join(line)))
+                ):
+                    raise ValueError(
+                        f'Sample sheet contains invalid characters on line '
+                        f'{i + 1}: {"".join(line)}')
 
-            section_match = header_pattern.match(line[0])
-            if section_match:
-                section = section_match.groups()[0]
-
-            elif section in ('Header', 'Settings'):
-                # Get either self.Header or self.Settings and add the attribute
-                # with whitespace removed, saving the original name.
-                original_key, value, *_ = line
-                getattr(self, section).add_attr(
-                    attr=re.sub(r'\s+', '_', original_key),
-                    value=value,
-                    name=original_key)
-
-            elif section == 'Reads':
-                self.Reads.append(int(line[0]))
-
-            elif section == 'Data':
-                if sample_header is None:
-                    sample_header = line
+                # Skip any line that is completely empty.
+                if not ''.join(line):
                     continue
 
-                if len(sample_header) != len(line):
-                    raise ValueError(
-                        'Sample header and sample are not the same length: '
-                        '{}'.format(line))
+                line_is_a_section = self._section_header_re.match(line[0])
 
-                self.add_sample(Sample(dict(zip(sample_header, line))))
+                if line_is_a_section:
+                    section, *_ = line_is_a_section.groups()
+
+                elif section in ('Header', 'Settings'):
+                    # Get either self.Header or self.Settings and add the
+                    # formatted attribute.
+                    original_key, value, *_ = line
+                    getattr(self, section).add_attr(
+                        attr=self._whitespace_re.sub('_', original_key),
+                        value=value,
+                        name=original_key)
+
+                elif section == 'Reads':
+                    self.Reads.append(int(line[0]))
+
+                elif section == 'Data':
+                    if sample_header is None:
+                        sample_header = line
+                        continue
+
+                    if len(sample_header) != len(line):
+                        raise ValueError(
+                            f'Header for [Data] section and sample keys are '
+                            f'not the same length: {line}')
+
+                    self.add_sample(Sample(dict(zip(sample_header, line))))
 
     def add_sample(self, sample):
         """Validate and add a ``Sample`` to this ``SampleSheet``.
@@ -552,6 +529,7 @@ class SampleSheet:
                     f'Cannot add a sample without attribute ``index2`` if a '
                     f'previous sample has ``index2`` set: {sample})')
 
+            # Prevent index collisions when samples are dual-indexed
             if (
                 self.samples_have_index and self.samples_have_index2 and
                 sample.index == other.index and sample.index2 == other.index2
@@ -560,6 +538,7 @@ class SampleSheet:
                     f'Sample index combination for {sample} has already been '
                     f'added: {other}')
 
+            # Prevent index collisions when samples are single-indexed (index)
             if (
                 self.samples_have_index and not self.samples_have_index2 and
                 sample.index == other.index
@@ -568,6 +547,7 @@ class SampleSheet:
                     f'First sample index for {sample} has already been '
                     f'added: {other}')
 
+            # Prevent index collisions when samples are single-indexed (index2)
             if (
                 not self.samples_have_index and self.samples_have_index2 and
                 sample.index2 == other.index2
@@ -729,7 +709,7 @@ class SampleSheet:
                 library_writer.writerow(map(str, library_line))
 
     def write(self, handle, blank_lines=1):
-        """Write this ``SampleSheet`` to a file.
+        """Write this ``SampleSheet`` to a file-like object.
 
         Parameters
         ----------
