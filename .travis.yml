@@ -1,13 +1,22 @@
 sudo: false
+
 language: python
+
 python:
-  - "3.6"
-  - "nightly"
+  - 3.6
+  - nightly
+
 install:
-  - pip install '.[test]'
+  - pip install '.[ci]'
+
 script:
-  - nosetests -v
+  - nosetests -v --with-coverage --cover-package=sample_sheet --cover-xml
+
+after_success:
+  - codecov
+
 notifications:
   email: false
+
 env:
   - COLUMNS=80
