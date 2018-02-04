@@ -29,7 +29,7 @@ setup(
         'terminaltables',
     ],
     extras_require={
-        'test': ['nose'],
+        'ci': ['nose', 'codecov'],
         'fancytest': ['nose', 'nose-progressive', 'coverage'],
     },
     scripts=[
