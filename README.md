@@ -21,6 +21,10 @@
     <img src="https://codecov.io/gh/clintval/sample-sheet/branch/master/graph/badge.svg"></img>
   </a>
 
+  <a href="https://badge.fury.io/py/sample_sheet">
+    <img src="https://badge.fury.io/py/sample_sheet.svg" alt="PyPI version"></img>
+  </a>
+
   <a href="https://github.com/clintval/sample-sheet/issues">
     <img src="https://img.shields.io/github/issues/clintval/sample-sheet.svg"></img>
   </a>
