@@ -1,4 +1,5 @@
 import csv
+import io
 import os
 import re
 import string
@@ -355,6 +356,36 @@ class SampleSheet:
         if self.path:
             self._parse(str(self.path))
 
+    @staticmethod
+    def _make_csv_reader(path):
+        """Return a ``csv.reader`` for a filepath.
+
+        This helper method is required since ``smart_open.smart_open`` cannot
+        decode to "utf8" on-the-fly specifically for HTTPS. Instead, the path
+        is opened, read, decoded, and then wrapped in a new handle for
+        ``csv.reader``.
+
+        Notes
+        -----
+        A workaround will exist as long as this issue remains unsolved:
+
+            https://github.com/RaRe-Technologies/smart_open/issues/146
+
+
+        Parameters
+        ----------
+        path : str or pathlib.Path
+            Any path supported by ``pathlib.Path`` and ``smart_open``.
+        Returns
+        -------
+        reader : csv.reader
+            A configured ``csv.reader`` for iterating through the sample sheet.
+        """
+        string = smart_open(str(path)).read().decode('utf8')
+        handle = io.StringIO(string, newline='')
+        reader = csv.reader(handle, skipinitialspace=True)
+        return reader
+
     @property
     def all_sample_keys(self):
         """Return the unique keys of all samples in this ``SampleSheet``."""
@@ -410,51 +441,47 @@ class SampleSheet:
     def _parse(self, path):
         section = sample_header = None
 
-        with smart_open(path, encoding=self._encoding) as handle:
-            for i, line in enumerate(csv.reader(
-                handle,
-                skipinitialspace=True)
+        for i, line in enumerate(self._make_csv_reader(path)):
+            if (
+                any(character not in VALID_ASCII
+                    for character in set(''.join(line)))
             ):
-                if (
-                    any(character not in VALID_ASCII
-                        for character in set(''.join(line)))
-                ):
-                    raise ValueError(
-                        f'Sample sheet contains invalid characters on line '
-                        f'{i + 1}: {"".join(line)}')
+                raise ValueError(
+                    f'Sample sheet contains invalid characters on line '
+                    f'{i + 1}: {"".join(line)}')
 
-                # Skip any line that is completely empty.
-                if not ''.join(line):
+            # Skip any line that is completely empty.
+            if not ''.join(line):
+                continue
+
+            line_is_a_section = self._section_header_re.match(line[0])
+
+            if line_is_a_section:
+                section, *_ = line_is_a_section.groups()
+
+            elif section in ('Header', 'Settings'):
+                # Get either self.Header or self.Settings and add the
+                # formatted attribute.
+                original_key, value, *_ = line
+                getattr(self, section).add_attr(
+                    attr=self._whitespace_re.sub('_', original_key),
+                    value=value,
+                    name=original_key)
+
+            elif section == 'Reads':
+                self.Reads.append(int(line[0]))
+
+            elif section == 'Data':
+                if sample_header is None:
+                    sample_header = line
                     continue
 
-                line_is_a_section = self._section_header_re.match(line[0])
+                if len(sample_header) != len(line):
+                    raise ValueError(
+                        f'Header for [Data] section and sample keys are '
+                        f'not the same length: {line}')
 
-                if line_is_a_section:
-                    section, *_ = line_is_a_section.groups()
-
-                elif section in ('Header', 'Settings'):
-                    # Get either self.Header or self.Settings and add the
-                    # formatted attribute.
-                    original_key, value, *_ = line
-                    getattr(self, section).add_attr(
-                        attr=self._whitespace_re.sub('_', original_key),
-                        value=value,
-                        name=original_key)
-
-                elif section == 'Reads':
-                    self.Reads.append(int(line[0]))
-
-                elif section == 'Data':
-                    if sample_header is None:
-                        sample_header = line
-                        continue
-
-                    if len(sample_header) != len(line):
-                        raise ValueError(
-                            f'Header for [Data] section and sample keys are '
-                            f'not the same length: {line}')
-
-                    self.add_sample(Sample(dict(zip(sample_header, line))))
+                self.add_sample(Sample(dict(zip(sample_header, line))))
 
     def add_sample(self, sample):
         """Validate and add a ``Sample`` to this ``SampleSheet``.
