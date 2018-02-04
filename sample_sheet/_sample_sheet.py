@@ -2,6 +2,7 @@ import csv
 import io
 import os
 import re
+import string
 import sys
 
 from contextlib import ExitStack
@@ -28,12 +29,11 @@ RECOMMENDED_KEYS = ['Sample_ID', 'Sample_Name', 'index']
 # https://www.illumina.com/content/dam/illumina-marketing/
 #     documents/products/technotes/
 #     sequencing-sheet-format-specifications-technical-note-970-2017-004.pdf
-VALID_ASCII_CODES = [
-    10,
-    13,
-    32,
-    *list(range(33, 47)),
-    *list(range(48, 127))]
+VALID_ASCII_CODES = set(
+    string.ascii_letters +
+    string.digits +
+    string.punctuation +
+    ' \n\r')
 
 
 class ReadStructure:
