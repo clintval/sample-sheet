@@ -2,5 +2,5 @@ comment:
   layout: "diff"
   behavior: default
   require_changes: yes
-  require_base: yes
+  require_base: no
   require_head: yes
