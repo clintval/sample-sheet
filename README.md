@@ -18,7 +18,7 @@
   </a>
 
   <a href="https://codecov.io/gh/clintval/sample-sheet">
-    <img src="https://codecov.io/gh/clintval/sample-sheet/branch/cv_codecov_integration/graph/badge.svg"></img>
+    <img src="https://codecov.io/gh/clintval/sample-sheet/branch/master/graph/badge.svg"></img>
   </a>
 
   <a href="https://github.com/clintval/sample-sheet/issues">
