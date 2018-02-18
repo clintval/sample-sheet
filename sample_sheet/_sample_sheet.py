@@ -583,6 +583,7 @@ class SampleSheet:
                     f'Second sample index for {sample} has already been '
                     f'added: {other}')
 
+        sample.sample_sheet = self
         self._samples.append(sample)
 
     def add_samples(self, samples):
