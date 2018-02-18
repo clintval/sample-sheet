@@ -1,6 +1,0 @@
-comment:
-  layout: "diff"
-  behavior: default
-  require_changes: no
-  require_base: no
-  require_head: yes
