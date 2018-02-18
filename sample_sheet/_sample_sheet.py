@@ -798,12 +798,8 @@ class SampleSheet:
 
     def __iter__(self):
         """Iterating over a ``SampleSheet`` will emit its samples."""
-        self._iter = iter(self.samples)
-        return self._iter
-
-    def __next__(self):
-        """If an iterator has been defined, get the next item."""
-        return next(self._iter)
+        for sample in self.samples:
+            yield sample
 
     def __repr__(self):
         """Show the constructor command to initialize this object."""
