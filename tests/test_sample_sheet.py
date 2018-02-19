@@ -8,12 +8,13 @@ from nose.tools import eq_
 from io import StringIO
 from itertools import groupby
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 from sample_sheet import *  # Test import of __all__
 
-RESOURCES = Path('./tests/resources').resolve()
+RESOURCES = (Path(__file__).absolute().resolve().parent / 'resources')
 
 VT_100_MAPPING = {
     '0x71': '─',
@@ -47,6 +48,14 @@ def decode_vt_100(iterable, default_set='(B', alt_set='(0', escape='\x1b'):
         elif characters.startswith(alt_set):
             for character in characters[len(alt_set):]:
                 yield VT_100_MAPPING[hex(ord(character))]
+
+
+def string_as_temporary_file(content):
+    """Writes content to a temporary file."""
+    handle = NamedTemporaryFile(mode='w+', delete=False)
+    handle.write(content)
+    handle.close()
+    return handle.name
 
 
 class TestSampleSheet(TestCase):
@@ -161,6 +170,24 @@ class TestSampleSheet(TestCase):
 
         assert_raises(ValueError, sample_sheet.add_sample, sample2)
 
+    def test_add_sample_same_indexes_same_lane(self):
+        """Test ``add_sample()`` for same samples on different lanes."""
+        sample1 = Sample({'Sample_ID': 12, 'index': 'AGGTA', 'Lane': '1'})
+        sample2 = Sample({'Sample_ID': 49, 'index': 'AGGTA', 'Lane': '1'})
+        sample_sheet = SampleSheet()
+        sample_sheet.add_sample(sample1)
+
+        assert_raises(ValueError, sample_sheet.add_sample, sample2)
+
+    def test_add_sample_same_sample_different_lane(self):
+        """Test ``add_sample()`` for same samples on different lanes."""
+        sample1 = Sample({'Sample_ID': 49, 'Library_ID': '234T', 'Lane': '1'})
+        sample2 = Sample({'Sample_ID': 49, 'Library_ID': '234T', 'Lane': '2'})
+        sample_sheet = SampleSheet()
+        sample_sheet.add_sample(sample1)
+
+        assert_is_none(sample_sheet.add_sample(sample2))
+
     def test_add_sample_different_pairing(self):
         """Test ``add_sample()`` when ``reads`` have been specified in the
         sample sheet which indicate if the sample should be paired or not.
@@ -243,6 +270,34 @@ class TestSampleSheet(TestCase):
 
         eq_(sample_sheet.all_sample_keys,
             {'Sample_ID', 'Sample_Name', 'index', 'Key1', 'Key2'})
+
+    def test_parse_invalid_ascii(self):
+        filename = string_as_temporary_file(
+            '[Header],\n'
+            ',\n'
+            '[Settings],\n'
+            ',\n'
+            '[Reads],\n'
+            ',\n'
+            '[Data],\n'
+            'Sample_ID, Description\n'
+            'test2, bad 😃 description\n')
+
+        assert_raises(ValueError, SampleSheet, filename)
+
+    def test_parse_different_length_header(self):
+        filename = string_as_temporary_file(
+            '[Header],,\n'
+            ',,\n'
+            '[Settings],,\n'
+            ',,\n'
+            '[Reads],,\n'
+            ',,\n'
+            '[Data],,\n'
+            'Sample_ID, Description,\n'
+            'test2, Sample Description, New Field\n')
+
+        assert_raises(ValueError, SampleSheet, filename)
 
     def test_experiment_design_plain_text(self):
         """Test ``experimental_design()`` plain text output"""
@@ -398,7 +453,7 @@ class TestSampleSheet(TestCase):
 
     def test_write(self):
         """Test ``write()`` by comparing a roundtrip of a sample sheet"""
-        infile = './tests/resources/paired-end-single-index.csv'
+        infile = RESOURCES / 'paired-end-single-index.csv'
         sample_sheet = SampleSheet(infile)
 
         string_handle = StringIO(newline=None)
@@ -431,12 +486,12 @@ class TestSampleSheet(TestCase):
 
     def test_str(self):
         """Test ``__str__()``, when not printing to a TTY"""
-        infile = './tests/resources/paired-end-single-index.csv'
+        infile = RESOURCES / 'paired-end-single-index.csv'
         eq_(SampleSheet(infile).__str__(), 'SampleSheet("{}")'.format(infile))
 
     def test_repr(self):
         """Test ``__repr__()``"""
-        infile = './tests/resources/paired-end-single-index.csv'
+        infile = RESOURCES / 'paired-end-single-index.csv'
         eq_(SampleSheet(infile).__repr__(), 'SampleSheet("{}")'.format(infile))
 
     def test_repr_tty(self):

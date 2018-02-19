@@ -77,7 +77,13 @@ class TestSample(TestCase):
 
         fake1 = Sample({'Sample_ID': 1, 'Library_ID': '10x'})
         fake2 = Sample({'Sample_ID': 1, 'Library_ID': '10x'})
+
         eq_(fake1, fake2)
+
+        fake1 = Sample({'Sample_ID': 1, 'Library_ID': '10x', 'Lane': '1'})
+        fake2 = Sample({'Sample_ID': 1, 'Library_ID': '10x', 'Lane': '2'})
+
+        assert_not_equal(fake1, fake2)
 
     def test_str(self):
         """Test ``sample.__str__()``"""
