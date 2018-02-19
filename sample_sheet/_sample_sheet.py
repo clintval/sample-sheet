@@ -418,7 +418,7 @@ class SampleSheet:
             headers=header,
             tablefmt='pipe')
 
-        if is_ipython_interpreter():
+        if is_ipython_interpreter():  # pragma:  no cover
             from IPython.display import Markdown
             return Markdown(markdown)
         else:

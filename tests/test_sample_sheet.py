@@ -464,6 +464,19 @@ class TestSampleSheet(TestCase):
         with open(infile, 'r', newline='\n', encoding='utf-8') as file_handle:
             self.assertMultiLineEqual(string_handle.read(), file_handle.read())
 
+    def test_write_invalid_num_blank_lines(self):
+        """Test ``write()`` when given invalid number of blank lines"""
+        infile = RESOURCES / 'paired-end-single-index.csv'
+        sample_sheet = SampleSheet(infile)
+
+        string_handle = StringIO(newline=None)
+        assert_raises(
+            ValueError,
+            lambda: sample_sheet.write(string_handle, blank_lines=0.4))
+        assert_raises(
+            ValueError,
+            lambda: sample_sheet.write(string_handle, blank_lines=-1))
+
     def test_iter(self):
         """Test ``__iter__()`` and ``__next__()``"""
         fake1, fake2 = Sample({'Sample_ID': 1}), Sample({'Sample_ID': 2})
