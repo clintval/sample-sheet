@@ -2,17 +2,18 @@ import csv
 import io
 import os
 import re
-import string
 import sys
 
 from contextlib import ExitStack
 from itertools import chain, repeat, islice
 from pathlib import Path
+from string import ascii_letters, digits, punctuation
 from textwrap import wrap
 
 from smart_open import smart_open
 from tabulate import tabulate
 from terminaltables import SingleTable
+from typing import List, Mapping, TextIO, Union
 
 __all__ = [
     'ReadStructure',
@@ -29,11 +30,7 @@ RECOMMENDED_KEYS = ['Sample_ID', 'Sample_Name', 'index']
 # https://www.illumina.com/content/dam/illumina-marketing/
 #     documents/products/technotes/
 #     sequencing-sheet-format-specifications-technical-note-970-2017-004.pdf
-VALID_ASCII = set(
-    string.ascii_letters +
-    string.digits +
-    string.punctuation +
-    ' \n\r')
+VALID_ASCII = set(ascii_letters + digits + punctuation + ' \n\r')
 
 
 class ReadStructure:
@@ -78,82 +75,82 @@ class ReadStructure:
     _skip_pattern = re.compile(r'(\d+S)')
     _template_pattern = re.compile(r'(\d+T)')
 
-    def __init__(self, structure):
+    def __init__(self, structure: str):
         if not bool(self._valid_pattern.match(structure)):
             raise ValueError(f'Not a valid read structure: "{structure}"')
         self.structure = structure
 
     @property
-    def is_indexed(self):
+    def is_indexed(self) -> bool:
         """Return if this read structure has sample indexes."""
         return len(self._index_pattern.findall(self.structure)) > 0
 
     @property
-    def is_single_indexed(self):
+    def is_single_indexed(self) -> bool:
         """Return if this read structure is single indexed."""
         return len(self._index_pattern.findall(self.structure)) == 1
 
     @property
-    def is_dual_indexed(self):
+    def is_dual_indexed(self) -> bool:
         """Return if this read structure is dual indexed."""
         return len(self._index_pattern.findall(self.structure)) == 2
 
     @property
-    def is_single_end(self):
+    def is_single_end(self) -> bool:
         """Return if this read structure is single-end."""
         return len(self._template_pattern.findall(self.structure)) == 1
 
     @property
-    def is_paired_end(self):
+    def is_paired_end(self) -> bool:
         """Return if this read structure is paired-end"""
         return len(self._template_pattern.findall(self.structure)) == 2
 
     @property
-    def has_indexes(self):
+    def has_indexes(self) -> bool:
         """Return if this read structure has any index tokens."""
         return len(self._index_pattern.findall(self.structure)) > 0
 
     @property
-    def has_skips(self):
+    def has_skips(self) -> bool:
         """Return if this read structure has any skip tokens."""
         return len(self._skip_pattern.findall(self.structure)) > 0
 
     @property
-    def has_umi(self):
+    def has_umi(self) -> bool:
         """Return if this read structure has any UMI tokens."""
         return len(self._umi_pattern.findall(self.structure)) > 0
 
     @property
-    def index_cycles(self):
+    def index_cycles(self) -> int:
         """The number of cycles dedicated to indexes."""
         tokens = self._index_pattern.findall(self.structure)
         return sum((int(re.sub(r'\D', '', token)) for token in tokens))
 
     @property
-    def template_cycles(self):
+    def template_cycles(self) -> int:
         """The number of cycles dedicated to template."""
         tokens = self._template_pattern.findall(self.structure)
         return sum((int(re.sub(r'\D', '', token)) for token in tokens))
 
     @property
-    def skip_cycles(self):
+    def skip_cycles(self) -> int:
         """The number of cycles dedicated to skips."""
         tokens = self._skip_pattern.findall(self.structure)
         return sum((int(re.sub(r'\D', '', token)) for token in tokens))
 
     @property
-    def umi_cycles(self):
+    def umi_cycles(self) -> int:
         """The number of cycles dedicated to UMI."""
         tokens = self._umi_pattern.findall(self.structure)
         return sum((int(re.sub(r'\D', '', token)) for token in tokens))
 
     @property
-    def total_cycles(self):
+    def total_cycles(self) -> int:
         """The number of total number of cycles in the structure."""
         return sum((int(re.sub(r'\D', '', token)) for token in self.tokens))
 
     @property
-    def tokens(self):
+    def tokens(self) -> List[str]:
         """Return a list of all tokens in the read structure."""
         return self._token_pattern.findall(self.structure)
 
@@ -200,9 +197,8 @@ class Sample:
 
     """
 
-    def __init__(self, mappable=None):
-        if mappable is None:
-            mappable = dict()
+    def __init__(self, mappable: Union[None, Mapping]=None):
+        mappable = dict() if mappable is None else mappable
 
         self._other_keys = set()
 
@@ -238,7 +234,7 @@ class Sample:
         ):
             raise ValueError(
                 f'If a single-indexed read structure is defined then a '
-                f'sample ``index`` must be defined also: {self}')
+                f'sample `index` must be defined also: {self}')
         elif (
             self.Read_Structure is not None and
             self.Read_Structure.is_dual_indexed and
@@ -247,7 +243,7 @@ class Sample:
         ):
             raise ValueError(
                 f'If a dual-indexed read structure is defined then '
-                f'sample ``index`` and sample ``index2`` must be defined '
+                f'sample `index` and sample `index2` must be defined '
                 f'also: {self}')
 
     def keys(self):
@@ -259,10 +255,14 @@ class Sample:
         return self.__dict__.get(attr)
 
     def __eq__(self, other):
-        """Samples are equal if ``Sample_ID`` and ``Library_ID`` are equal."""
+        """Samples are equal if ``Sample_ID``, ``Library_ID``, and ``Lane are
+        equal.
+
+        """
         return (
             self.Sample_ID == other.Sample_ID and
-            self.Library_ID == other.Library_ID)
+            self.Library_ID == other.Library_ID and
+            self.Lane == other.Lane)
 
     def __repr__(self):
         """Shows a simplified constructor command to initialize this object."""
@@ -340,7 +340,7 @@ class SampleSheet:
     _section_header_re = re.compile(r'\[(.*)\]')
     _whitespace_re = re.compile(r'\s+')
 
-    def __init__(self, path=None):
+    def __init__(self, path: Union[None, str, Path]=None):
         self.path = path
 
         self._samples = []
@@ -357,7 +357,7 @@ class SampleSheet:
             self._parse(str(self.path))
 
     @staticmethod
-    def _make_csv_reader(path):
+    def _make_csv_reader(path: Union[str, Path]) -> csv.reader:
         """Return a ``csv.reader`` for a filepath.
 
         This helper method is required since ``smart_open.smart_open`` cannot
@@ -365,29 +365,30 @@ class SampleSheet:
         is opened, read, decoded, and then wrapped in a new handle for
         ``csv.reader``.
 
+        Parameters
+        ----------
+        path : str or pathlib.Path
+            Any path supported by ``pathlib.Path`` and ``smart_open``.
+
+        Returns
+        -------
+        reader : csv.reader
+            A configured ``csv.reader`` for iterating through the sample sheet.
+
         Notes
         -----
         A workaround will exist as long as this issue remains unsolved:
 
             https://github.com/RaRe-Technologies/smart_open/issues/146
 
-
-        Parameters
-        ----------
-        path : str or pathlib.Path
-            Any path supported by ``pathlib.Path`` and ``smart_open``.
-        Returns
-        -------
-        reader : csv.reader
-            A configured ``csv.reader`` for iterating through the sample sheet.
         """
-        string = smart_open(str(path)).read().decode('utf8')
+        string = smart_open(str(path)).read().decode(SampleSheet._encoding)
         handle = io.StringIO(string, newline='')
         reader = csv.reader(handle, skipinitialspace=True)
         return reader
 
     @property
-    def all_sample_keys(self):
+    def all_sample_keys(self) -> set:
         """Return the unique keys of all samples in this ``SampleSheet``."""
         all_keys = set()
         for sample in self:
@@ -424,12 +425,12 @@ class SampleSheet:
             return markdown
 
     @property
-    def is_paired_end(self):
+    def is_paired_end(self) -> Union[None, bool]:
         """Return if the samples are paired-end."""
         return None if not self.Reads else len(self.Reads) == 2
 
     @property
-    def is_single_end(self):
+    def is_single_end(self) -> Union[None, bool]:
         """Return if the samples are single-end."""
         return None if not self.Reads else len(self.Reads) == 1
 
@@ -438,7 +439,7 @@ class SampleSheet:
         """Return the samples present in this ``SampleSheet``."""
         return self._samples
 
-    def _parse(self, path):
+    def _parse(self, path: Union[str, Path]):
         section = sample_header = None
 
         for i, line in enumerate(self._make_csv_reader(path)):
@@ -450,8 +451,8 @@ class SampleSheet:
                     f'Sample sheet contains invalid characters on line '
                     f'{i + 1}: {"".join(line)}')
 
-            # Skip any line that is completely empty.
             if not ''.join(line):
+                # Skip any line that is completely empty.
                 continue
 
             line_is_a_section = self._section_header_re.match(line[0])
@@ -483,28 +484,34 @@ class SampleSheet:
 
                 self.add_sample(Sample(dict(zip(sample_header, line))))
 
-    def add_sample(self, sample):
+    def add_sample(self, sample: Sample):
         """Validate and add a ``Sample`` to this ``SampleSheet``.
 
-        All samples are checked against the first sample added to ensure they
-        all have the sample ``read_structure`` attribute, if supplied. The
-        ``SampleSheet`` will inherit the same ``read_structure`` attribute.
+        All samples are validated against the first sampled added to the sample
+        sheet to ensure there are no ID collisions or incompatible read
+        structures (if supplied). All samples are also validated against the
+        [Reads] section of the sample sheet if it has been defined.
 
-        Samples cannot be added if the following criteria is met:
-            - ``Sample_ID`` and ``Sample_Library`` combination exists
-            - ``index`` and/or ``index2`` combination exists
-            - Samplesheet.reads and Sample.Read_Structure are incompatible
-            - Sample does not have ``index`` defined but others do
-            - Sample does not have ``index2`` defined but others do
-            - If defined, sample ``read_structure`` is different than others
+        The following validation is performed when adding a sample:
+
+            - ``Read_Structure`` is identical in all samples, if supplied
+            - ``Read_Structure`` is comptaible with [Reads], if supplied
+            - Samples on the same ``Lane`` cannot have the same ``Sample_ID``
+                  and ``Library_ID``.
+            - Samples cannot have the same ``Sample_ID`` if no ``Lane`` has
+                  been defined.
+            - The same ``index`` or ``index2`` combination cannot exist per
+                  flowcell or per lane if lanes have been defined.
+            - All samples have the same index design (index, index2) per
+                  flowcell or per lane if lanes have been defined.
 
         Parameters
         ----------
         sample : Sample
-            Sample to add to this sample sheet.
+            ``Sample`` to add to this sample sheet.
 
         """
-        # Set whether the samples will have ``index ``or ``index2``.
+        # Set whether the samples will have ``index`` or ``index2``.
         if len(self.samples) == 0:
             self.samples_have_index = sample.index is not None
             self.samples_have_index2 = sample.index2 is not None
@@ -539,59 +546,69 @@ class SampleSheet:
                 f'than read structure in samplesheet ({self.Read_Structure}).')
 
         # Compare this sample against all those already defined to ensure none
-        # have equal ``Sample_ID`` or ``Library_ID`` attributes. Ensure that
-        # all samples have attributes ``index``, ``index2`` or both. Check to
-        # make sure this sample's index combination has not been added before.
+        # have equal ``Sample_ID``, ``Library_ID``, and ``Lane`` attributes.
+        # Ensure that all samples have attributes ``index``, ``index2``, or
+        # both if they have been defined.
         for other in self.samples:
             if sample == other:
                 raise ValueError(
-                    f'Cannot add two samples with the same ``Sample_ID`` and '
-                    f'``Library_ID``: sample - {sample}, other - {other}')
+                    f'Cannot add two samples with the same '
+                    f'`Sample_ID`, `Library_ID`, and `Lane`: '
+                    f'sample - {sample}, other - {other}')
             if sample.index is None and self.samples_have_index:
                 raise ValueError(
-                    f'Cannot add a sample without attribute ``index`` if a '
-                    f'previous sample has ``index`` set: {sample})')
+                    f'Cannot add a sample without attribute `index` if a '
+                    f'previous sample has `index` set: {sample})')
             if sample.index2 is None and self.samples_have_index2:
                 raise ValueError(
-                    f'Cannot add a sample without attribute ``index2`` if a '
-                    f'previous sample has ``index2`` set: {sample})')
+                    f'Cannot add a sample without attribute `index2` if a '
+                    f'previous sample has `index2` set: {sample})')
 
             # Prevent index collisions when samples are dual-indexed
             if (
                 self.samples_have_index and self.samples_have_index2 and
-                sample.index == other.index and sample.index2 == other.index2
+                sample.index == other.index and
+                sample.index2 == other.index2 and
+                sample.Lane == other.Lane
             ):
                 raise ValueError(
                     f'Sample index combination for {sample} has already been '
-                    f'added: {other}')
+                    f'added on this lane or flowcell: {other}')
 
             # Prevent index collisions when samples are single-indexed (index)
             if (
                 self.samples_have_index and not self.samples_have_index2 and
-                sample.index == other.index
+                sample.index == other.index and
+                sample.Lane == other.Lane
             ):
                 raise ValueError(
                     f'First sample index for {sample} has already been '
-                    f'added: {other}')
+                    f'added on this lane or flowcell: {other}')
 
             # Prevent index collisions when samples are single-indexed (index2)
             if (
                 not self.samples_have_index and self.samples_have_index2 and
-                sample.index2 == other.index2
+                sample.index2 == other.index2 and
+                sample.Lane == other.Lane
             ):
                 raise ValueError(
                     f'Second sample index for {sample} has already been '
-                    f'added: {other}')
+                    f'added on this lane or flowcell: {other}')
 
         sample.sample_sheet = self
         self._samples.append(sample)
 
-    def add_samples(self, samples):
+    def add_samples(self, samples: List[Sample]):
         """Add samples in an iterable to this ``SampleSheet``."""
         for sample in samples:
             self.add_sample(sample)
 
-    def to_picard_basecalling_params(self, directory, bam_prefix, lanes):
+    def to_picard_basecalling_params(
+        self,
+        directory: Union[str, Path],
+        bam_prefix: Union[str, Path],
+        lanes: Union[int, List[int]]
+    ):
         """Writes sample and library information to a set of files for a given
         set of lanes.
 
@@ -736,7 +753,7 @@ class SampleSheet:
                     '']
                 library_writer.writerow(map(str, library_line))
 
-    def write(self, handle, blank_lines=1):
+    def write(self, handle: TextIO, blank_lines: int=1):
         """Write this ``SampleSheet`` to a file-like object.
 
         Parameters
@@ -876,13 +893,7 @@ class SampleSheet:
         return table
 
 
-def is_ipython_interpreter():
-    try:
-        # The presence of this global name indicates we are in an
-        # IPython interpreter and are safe to render Markdown.
-        __IPYTHON__  # noqa
-        # Attempt to import the IPython library
-        import IPython  # noqa
-        return True
-    except (ImportError, NameError):
-        return False
+def is_ipython_interpreter() -> bool:  # pragma:  no cover
+    # __IPYTHON__ indicates we are in an IPython interpreter.
+    import __main__ as main
+    return hasattr(main, '__IPYTHON__')

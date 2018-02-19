@@ -7,5 +7,5 @@ nosetests \
   --doctest-tests \
   --cover-package=sample_sheet \
   --with-progressive \
-  $(basename "${0}/tests") \
+  "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" \
   "${@}"
