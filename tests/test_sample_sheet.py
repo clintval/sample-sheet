@@ -271,7 +271,7 @@ class TestSampleSheet(TestCase):
         eq_(sample_sheet.all_sample_keys,
             {'Sample_ID', 'Sample_Name', 'index', 'Key1', 'Key2'})
 
-    def test_invalid_ascii(self):
+    def test_parse_invalid_ascii(self):
         filename = string_as_temporary_file(
             '[Header],\n'
             ',\n'
@@ -282,6 +282,20 @@ class TestSampleSheet(TestCase):
             '[Data],\n'
             'Sample_ID, Description\n'
             'test2, bad 😃 description\n')
+
+        assert_raises(ValueError, SampleSheet, filename)
+
+    def test_parse_different_length_header(self):
+        filename = string_as_temporary_file(
+            '[Header],,\n'
+            ',,\n'
+            '[Settings],,\n'
+            ',,\n'
+            '[Reads],,\n'
+            ',,\n'
+            '[Data],,\n'
+            'Sample_ID, Description,\n'
+            'test2, Sample Description, New Field\n')
 
         assert_raises(ValueError, SampleSheet, filename)
 

@@ -1,4 +1,6 @@
-from nose.tools import assert_is_none, eq_
+from nose.tools import assert_is_none
+from nose.tools import assert_raises
+from nose.tools import eq_
 
 from unittest import TestCase
 
@@ -19,6 +21,16 @@ class TestSampleSheetSection(TestCase):
 
         eq_(sample_sheet.Header._key_map,
             {'Investigator_Name': 'Investigator Name'})
+
+    def test_add_attribute_with_spaces(self):
+        """Test ``add_attr()`` to raise exception with whitespace"""
+        sample_sheet = SampleSheet()
+        assert_raises(
+            ValueError,
+            lambda: sample_sheet.Header.add_attr(
+                attr='Investigator Name',
+                value='jdoe',
+                name='Investigator Name'))
 
     def test_default_getattr(self):
         """Test that accessing an unknown attribute returns None"""

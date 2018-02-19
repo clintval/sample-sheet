@@ -474,13 +474,13 @@ class SampleSheet:
 
             elif section == 'Data':
                 if sample_header is None:
+                    # Ensure the column names for all samples are not empty.
+                    if any(key == '' for key in line):
+                        raise ValueError(
+                            f'Header for [Data] section is not allowed to '
+                            f'have empty fields: {line}')
                     sample_header = line
                     continue
-
-                if len(sample_header) != len(line):
-                    raise ValueError(
-                        f'Header for [Data] section and sample keys are '
-                        f'not the same length: {line}')
 
                 self.add_sample(Sample(dict(zip(sample_header, line))))
 
