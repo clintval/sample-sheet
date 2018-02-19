@@ -32,9 +32,15 @@
 
 <h3 align="center">Tutorial</h3>
 
-A sample sheet can be read from S3, HDFS, WebHDFS, HTTP as wel as local (compressed or not). To demo the library let's use a generic sample sheet at an HTTPS endpoint.
 
-If you have cloned this repository, the file can be found in the following relative location: [`sample-sheet/tests/resources/paired-end-single-index.csv`](tests/resources/paired-end-single-index.csv).
+A test sample sheet at an HTTPS endpoint will be used to demonstrate the library. The test file can also be found in the relative location: [`sample-sheet/tests/resources/paired-end-single-index.csv`](tests/resources/paired-end-single-index.csv).
+
+The following URIs types are supported for reading sample sheets.
+
+- S3
+- HDFS
+- WebHDFS
+- HTTP
 
 ```python
 from sample_sheet import SampleSheet
@@ -102,18 +108,18 @@ import sys
 
 sample_sheet = SampleSheet()
 
-# Fill out the [Header] section of the sample sheet
+# Fill out the [Header] section of the sample sheet.
 sample_sheet.Header.IEM4FileVersion = 4
 
 # If you want to use a key with whitespace it in you must use the `add_attr`
 # method and specify and alternate name.
 sample_sheet.Header.add_attr(attr='Investigator_Name', value='jdoe', name='Investigator Name')
 
-# Fill out the [Settings] section of the sample sheet
+# Fill out the [Settings] section of the sample sheet.
 sample_sheet.Settings.CreateFastqForIndexReads = 1
 sample_sheet.Settings.BarcodeMismatches = 2
 
-# Create a paired-end flowcell with 151 template bases
+# Create a paired-end flowcell with 151 template bases.
 sample_sheet.Reads = [151, 151]
 
 # Create your first single-indexed sample with both a name and ID.
