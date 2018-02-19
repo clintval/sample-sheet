@@ -32,21 +32,17 @@
 
 <h3 align="center">Tutorial</h3>
 
-A sample sheet can be read from S3, HDFS, WebHDFS, HTTP as well as local (compressed or not).
+A sample sheet can be read from S3, HDFS, WebHDFS, HTTP as wel as local (compressed or not). To demo the library let's use a generic sample sheet at an HTTPS endpoint.
+
+If you have cloned this repository, the file can be found in the following relative location: [`sample-sheet/tests/resources/paired-end-single-index.csv`](tests/resources/paired-end-single-index.csv).
 
 ```python
->>> from sample_sheet import SampleSheet 
->>> SampleSheet('s3://bucket/prefix/SampleSheet.csv')
-SampleSheet("s3://bucket/prefix/SampleSheet.csv")
-```
+from sample_sheet import SampleSheet
 
-An example sample sheet can be found at [`tests/resources/paired-end-single-index.csv`](tests/resources/paired-end-single-index.csv).
+host = 'https://raw.githubusercontent.com/'
+url = host + 'clintval/sample-sheet/master/tests/resources/paired-end-single-index.csv'
 
-```python
->>> from sample_sheet import SampleSheet
->>>
->>> url = 'https://raw.githubusercontent.com/clintval/sample-sheet/master/tests/resources/paired-end-single-index.csv'
->>> sample_sheet = SampleSheet(url)
+sample_sheet = SampleSheet(url)
 ```
 
 The metadata of the sample sheet can be accessed with the `Header`, `Reads` and, `Settings` attributes:
@@ -102,28 +98,33 @@ ReadStructure(structure="151T8B151T")
 Sample sheets can be created _de novo_ and written to a file-like object:
 
 ```python
->>> sample_sheet = SampleSheet()
->>>
->>> sample_sheet.Header.IEM4FileVersion = 4
->>> sample_sheet.Header.add_attr(
->>>     attr='Investigator_Name',
->>>     value='jdoe',
->>>     name='Investigator Name')
->>>
->>> sample_sheet.Settings.CreateFastqForIndexReads = 1
->>> sample_sheet.Settings.BarcodeMismatches = 2
->>>
->>> sample_sheet.Reads = [151, 151]
->>>
->>> sample = Sample(dict(
->>>     Sample_ID='1823A',
->>>     Sample_Name='1823A-tissue',
->>>     index='ACGT'))
->>>
->>> sample_sheet.add_sample(sample)
->>>
->>> import sys
->>> sample_sheet.write(sys.stdout)
+import sys
+
+sample_sheet = SampleSheet()
+
+# Fill out the [Header] section of the sample sheet
+sample_sheet.Header.IEM4FileVersion = 4
+
+# If you want to use a key with whitespace it in you must use the `add_attr`
+# method and specify and alternate name.
+sample_sheet.Header.add_attr(attr='Investigator_Name', value='jdoe', name='Investigator Name')
+
+# Fill out the [Settings] section of the sample sheet
+sample_sheet.Settings.CreateFastqForIndexReads = 1
+sample_sheet.Settings.BarcodeMismatches = 2
+
+# Create a paired-end flowcell with 151 template bases
+sample_sheet.Reads = [151, 151]
+
+# Create your first single-indexed sample with both a name and ID.
+sample = Sample(dict(Sample_ID='1823A', Sample_Name='1823A-tissue', index='ACGT'))
+
+sample_sheet.add_sample(sample)
+
+sample_sheet.write(sys.stdout)
+```
+
+```python
 """
 [Header],,
 IEM4FileVersion,4,
@@ -214,7 +215,7 @@ Prints a tabular summary of the sample sheet.
 
 <h3 align="center">Contributing</h3>
 
-Pull requests and issues welcome!
+Pull requests, feature requests, and issues welcome!
 
 To make a development install:
 
@@ -226,14 +227,13 @@ To make a development install:
 To run the tests:
 
 ```
-❯ ./sample-sheet/tests/run-tests
 Name                            Stmts   Miss  Cover
 ---------------------------------------------------
 sample_sheet/__init__.py            1      0   100%
-sample_sheet/_sample_sheet.py     280      0   100%
+sample_sheet/_sample_sheet.py     334      0   100%
 ---------------------------------------------------
-TOTAL                             281      0   100%
+TOTAL                             335      0   100%
 
-OK!  58 tests, 0 failures, 0 errors in 0.0s
+OK!  65 tests, 0 failures, 0 errors in 0.1s
 ```
 
