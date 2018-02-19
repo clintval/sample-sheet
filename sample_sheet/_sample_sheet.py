@@ -155,7 +155,7 @@ class ReadStructure:
         return self._token_pattern.findall(self.structure)
 
     def copy(self):
-        """Returns a shallow copy of this read structure."""
+        """Returns a deep copy of this read structure."""
         return ReadStructure(self.structure)
 
     def __eq__(self, other):
@@ -178,7 +178,7 @@ class Sample:
     sample sheet. Although no keys are explicitly required it is recommended to
     at least use "Sample_ID", "Sample_Name", and "index". All keys with
     whitespace will have the whitespace replaced with a single underscore. If
-    the key ``Read_Structure`` is provided then its value is promoted to class
+    the key "Read_Structure" is provided then its value is promoted to class
     ``ReadStructure`` and additional functionality is enabled.
 
     Parameters
@@ -281,7 +281,6 @@ class SampleSheetSection:
 
     def add_attr(self, attr, value, name=None):
         """Add an attribute to this class and optionally save an alternate key.
-
 
         Parameters
         ----------
@@ -894,6 +893,6 @@ class SampleSheet:
 
 
 def is_ipython_interpreter() -> bool:  # pragma:  no cover
-    # __IPYTHON__ indicates we are in an IPython interpreter.
+    """Return if we are in an IPython interpreter or not."""
     import __main__ as main
     return hasattr(main, '__IPYTHON__')

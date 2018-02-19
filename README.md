@@ -13,25 +13,11 @@
 </p>
 
 <p align="center">
-  <a href="https://travis-ci.org/clintval/sample-sheet">
-    <img src="https://travis-ci.org/clintval/sample-sheet.svg?branch=master"></img>
-  </a>
-
-  <a href="https://codecov.io/gh/clintval/sample-sheet">
-    <img src="https://codecov.io/gh/clintval/sample-sheet/branch/master/graph/badge.svg"></img>
-  </a>
-
-  <a href="https://badge.fury.io/py/sample_sheet">
-    <img src="https://badge.fury.io/py/sample_sheet.svg" alt="PyPI version"></img>
-  </a>
-
-  <a href="https://github.com/clintval/sample-sheet/issues">
-    <img src="https://img.shields.io/github/issues/clintval/sample-sheet.svg"></img>
-  </a>
-
-  <a href="https://github.com/clintval/sample-sheet/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/clintval/sample-sheet.svg"></img>
-  </a>
+  <a href="https://travis-ci.org/clintval/sample-sheet"><img src="https://travis-ci.org/clintval/sample-sheet.svg?branch=master"></img></a>
+  <a href="https://codecov.io/gh/clintval/sample-sheet"><img src="https://codecov.io/gh/clintval/sample-sheet/branch/master/graph/badge.svg"></img></a>
+  <a href="https://badge.fury.io/py/sample_sheet"><img src="https://badge.fury.io/py/sample_sheet.svg" alt="PyPI version"></img></a>
+  <a href="https://codeclimate.com/github/clintval/sample-sheet/maintainability"><img src="https://api.codeclimate.com/v1/badges/80b4ce92cc622e857c79/maintainability"></img></a>
+  <a href="https://github.com/clintval/sample-sheet/blob/master/LICENSE"><img src="https://img.shields.io/pypi/l/sample-sheet.svg"></img></a>
 </p>
 
 <br>
@@ -46,21 +32,23 @@
 
 <h3 align="center">Tutorial</h3>
 
-A sample sheet can be read from S3, HDFS, WebHDFS, HTTP as well as local (compressed or not).
+
+A test sample sheet at an HTTPS endpoint will be used to demonstrate the library. The test file can also be found in the relative location: [`sample-sheet/tests/resources/paired-end-single-index.csv`](tests/resources/paired-end-single-index.csv).
+
+The following URIs types are supported for reading sample sheets.
+
+- S3
+- HDFS
+- WebHDFS
+- HTTP
 
 ```python
->>> from sample_sheet import SampleSheet 
->>> SampleSheet('s3://bucket/prefix/SampleSheet.csv')
-SampleSheet("s3://bucket/prefix/SampleSheet.csv")
-```
+from sample_sheet import SampleSheet
 
-An example sample sheet can be found at [`tests/resources/paired-end-single-index.csv`](tests/resources/paired-end-single-index.csv).
+host = 'https://raw.githubusercontent.com/'
+url = host + 'clintval/sample-sheet/master/tests/resources/paired-end-single-index.csv'
 
-```python
->>> from sample_sheet import SampleSheet
->>>
->>> url = 'https://raw.githubusercontent.com/clintval/sample-sheet/master/tests/resources/paired-end-single-index.csv'
->>> sample_sheet = SampleSheet(url)
+sample_sheet = SampleSheet(url)
 ```
 
 The metadata of the sample sheet can be accessed with the `Header`, `Reads` and, `Settings` attributes:
@@ -116,28 +104,33 @@ ReadStructure(structure="151T8B151T")
 Sample sheets can be created _de novo_ and written to a file-like object:
 
 ```python
->>> sample_sheet = SampleSheet()
->>>
->>> sample_sheet.Header.IEM4FileVersion = 4
->>> sample_sheet.Header.add_attr(
->>>     attr='Investigator_Name',
->>>     value='jdoe',
->>>     name='Investigator Name')
->>>
->>> sample_sheet.Settings.CreateFastqForIndexReads = 1
->>> sample_sheet.Settings.BarcodeMismatches = 2
->>>
->>> sample_sheet.Reads = [151, 151]
->>>
->>> sample = Sample(dict(
->>>     Sample_ID='1823A',
->>>     Sample_Name='1823A-tissue',
->>>     index='ACGT'))
->>>
->>> sample_sheet.add_sample(sample)
->>>
->>> import sys
->>> sample_sheet.write(sys.stdout)
+import sys
+
+sample_sheet = SampleSheet()
+
+# Fill out the [Header] section of the sample sheet.
+sample_sheet.Header.IEM4FileVersion = 4
+
+# If you want to use a key with whitespace it in you must use the `add_attr`
+# method and specify and alternate name.
+sample_sheet.Header.add_attr(attr='Investigator_Name', value='jdoe', name='Investigator Name')
+
+# Fill out the [Settings] section of the sample sheet.
+sample_sheet.Settings.CreateFastqForIndexReads = 1
+sample_sheet.Settings.BarcodeMismatches = 2
+
+# Create a paired-end flowcell with 151 template bases.
+sample_sheet.Reads = [151, 151]
+
+# Create your first single-indexed sample with both a name and ID.
+sample = Sample(dict(Sample_ID='1823A', Sample_Name='1823A-tissue', index='ACGT'))
+
+sample_sheet.add_sample(sample)
+
+sample_sheet.write(sys.stdout)
+```
+
+```python
 """
 [Header],,
 IEM4FileVersion,4,
@@ -228,7 +221,7 @@ Prints a tabular summary of the sample sheet.
 
 <h3 align="center">Contributing</h3>
 
-Pull requests and issues welcome!
+Pull requests, feature requests, and issues welcome!
 
 To make a development install:
 
@@ -240,14 +233,13 @@ To make a development install:
 To run the tests:
 
 ```
-❯ ./sample-sheet/tests/run-tests
 Name                            Stmts   Miss  Cover
 ---------------------------------------------------
 sample_sheet/__init__.py            1      0   100%
-sample_sheet/_sample_sheet.py     280      0   100%
+sample_sheet/_sample_sheet.py     334      0   100%
 ---------------------------------------------------
-TOTAL                             281      0   100%
+TOTAL                             335      0   100%
 
-OK!  58 tests, 0 failures, 0 errors in 0.0s
+OK!  65 tests, 0 failures, 0 errors in 0.1s
 ```
 
