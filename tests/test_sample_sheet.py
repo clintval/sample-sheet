@@ -451,6 +451,26 @@ class TestSampleSheet(TestCase):
                 (prefix / 'library_params.2.txt').read_text(),
                 library_params.format(lane=2))
 
+    def test_parse_manifests(self):
+        filename = string_as_temporary_file(
+            '[Header],\n'
+            ',\n'
+            '[Manifests],\n'
+            'PoolRNA,RNAMatrix.txt\n'
+            'PoolDNA,DNAMatrix.txt\n'
+            ',\n'
+            '[Settings],\n'
+            ',\n'
+            '[Reads],\n'
+            ',\n'
+            '[Data],\n'
+            'Sample_ID, Description\n'
+            'test,description\n')
+        sample_sheet = SampleSheet(filename)
+        eq_(sample_sheet.Manifests.keys, ['PoolRNA','PoolDNA'])
+        eq_(sample_sheet.Manifests.PoolRNA, 'RNAMatrix.txt')
+        eq_(sample_sheet.Manifests.PoolDNA, 'DNAMatrix.txt')
+
     def test_write(self):
         """Test ``write()`` by comparing a roundtrip of a sample sheet"""
         infile = RESOURCES / 'paired-end-single-index.csv'

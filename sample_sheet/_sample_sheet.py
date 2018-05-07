@@ -199,7 +199,6 @@ class Sample:
 
     def __init__(self, mappable: Union[None, Mapping]=None):
         mappable = dict() if mappable is None else mappable
-
         self._other_keys = set()
 
         self._whitespace_re = re.compile(r'\s+')
@@ -325,6 +324,7 @@ class SampleSheet:
     comma. The sample sheet is composed of four sections, marked by a header.
 
         [Header]   : .ini convention
+        [Manifests]: .ini convention (optional)
         [Settings] : .ini convention
         [Reads]    : .ini convention as a vertical array of items
         [Data]     : table with header
@@ -350,6 +350,7 @@ class SampleSheet:
         self.samples_have_index2 = None
 
         self.Header = SampleSheetSection()
+        self.Manifests = SampleSheetSection()
         self.Settings = SampleSheetSection()
 
         if self.path:
@@ -459,9 +460,9 @@ class SampleSheet:
             if line_is_a_section:
                 section, *_ = line_is_a_section.groups()
 
-            elif section in ('Header', 'Settings'):
-                # Get either self.Header or self.Settings and add the
-                # formatted attribute.
+            elif section in ('Header', 'Manifests', 'Settings'):
+                # Get either self.Header, self.Manifests or self.Setting and
+                # add the formatted attribute.
                 original_key, value, *_ = line
                 getattr(self, section).add_attr(
                     attr=self._whitespace_re.sub('_', original_key),
@@ -789,6 +790,15 @@ class SampleSheet:
         for read in self.Reads:
             writer.writerow(pad_iterable([read], csv_width))
         write_blank_lines(writer)
+
+        # [Manifests] (Optional)
+        if self.Manifests.keys:
+            writer.writerow(pad_iterable(['[Manifests]'], csv_width))
+            for attribute in self.Manifests.keys:
+                key = self.Manifests._key_map[attribute]
+                value = getattr(self.Manifests, attribute)
+                writer.writerow(pad_iterable([key, value], csv_width))
+            write_blank_lines(writer)
 
         # [Settings]
         writer.writerow(pad_iterable(['[Settings]'], csv_width))
