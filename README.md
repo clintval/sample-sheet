@@ -54,7 +54,7 @@ sample_sheet = SampleSheet(url)
 The metadata of the sample sheet can be accessed with the `Header`, `Reads` and, `Settings` attributes:
 
 ```python
->>> sample_sheet.header.Assay
+>>> sample_sheet.Header.Assay
 'SureSelectXT'
 
 >>> sample_sheet.Reads
