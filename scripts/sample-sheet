@@ -1,20 +1,42 @@
 #!/usr/bin/env python3
 import click
+import json
 
 from sample_sheet import SampleSheet
 
 
-@click.group(context_settings=dict(help_option_names=['-h', '--help']))
-def cli():
-    pass
+#@click.group(context_settings=dict(help_option_names=['-h', '--help']))
+#def cli():
+#    pass
 
 
-@cli.command()
+@click.command()
 @click.argument('path')
-def summary(path):
-    """Pretty print a sample sheet"""
-    print(SampleSheet(path))
+@click.option('--output',type=click.Choice(['pretty','json']),
+              default='pretty', help='Select output format')
+def summary(path,output):
+    """Print a sample sheet"""
+    if output == 'pretty':
+       print(SampleSheet(path))
+    elif output == 'json':
+       sheet = SampleSheet(path)
+       obj = {} 
+       obj['Header'] = []
+       obj['Header'].append({k:getattr(sheet.Header,k) for k in sheet.Header.keys})
+
+       if sheet.Manifests.keys:
+           obj['Manifests'] = []
+           obj['Manifests'].append({k:getattr(sheet.Manifests,k) for k in sheet.Manifests.keys})
+
+       obj['Settings'] = []
+       obj['Settings'].append({k:getattr(sheet.Settings,k) for k in sheet.Settings.keys})
+
+       obj['Samples'] = []
+       for s in sheet.samples:
+           obj['Samples'].append({k:getattr(s,k) for k in s.keys()})
+       print(json.dumps(obj, sort_keys=True, indent=4))
+
 
 
 if __name__ == '__main__':
-    cli()
+    summary()
