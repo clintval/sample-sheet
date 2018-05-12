@@ -482,7 +482,6 @@ class TestSampleSheet(TestCase):
         sample_sheet1 = SampleSheet()
         sample_sheet1.add_section('Manifests')
         sample_sheet1.Manifests.PoolRNA = 'RNAMatrix.txt'
-        sample_sheet1.Manifests.PoolDNA = 'DNAMatrix.txt'
 
         # Write to string and make temporary file
         string_handle = StringIO(newline=None)
@@ -492,9 +491,30 @@ class TestSampleSheet(TestCase):
 
         # Read temporary file and confirm section and it's data exists.
         sample_sheet2 = SampleSheet(filename)
-        assert_list_equal(sample_sheet2.Manifests.keys, ['PoolRNA', 'PoolDNA'])
+        assert_list_equal(sample_sheet2.Manifests.keys, ['PoolRNA'])
         eq_(sample_sheet2.Manifests.PoolRNA, 'RNAMatrix.txt')
-        eq_(sample_sheet2.Manifests.PoolDNA, 'DNAMatrix.txt')
+
+    def test_write_custom_sections(self):
+        """Test ``write()`` when multiple custom sections are defined"""
+        # Create a ``SampleSheet`` with a [Manifests] section
+        sample_sheet1 = SampleSheet()
+        sample_sheet1.add_section('Manifests')
+        sample_sheet1.Manifests.PoolRNA = 'RNAMatrix.txt'
+        sample_sheet1.add_section('TestingSection')
+        sample_sheet1.TestingSection.KeyNumber1 = 'DNAMatrix.txt'
+
+        # Write to string and make temporary file
+        string_handle = StringIO(newline=None)
+        sample_sheet1.write(string_handle)
+        string_handle.seek(0)
+        filename = string_as_temporary_file(string_handle.read())
+
+        # Read temporary file and confirm section and it's data exists.
+        sample_sheet2 = SampleSheet(filename)
+        assert_list_equal(sample_sheet2.Manifests.keys, ['PoolRNA'])
+        eq_(sample_sheet2.Manifests.PoolRNA, 'RNAMatrix.txt')
+        assert_list_equal(sample_sheet2.TestingSection.keys, ['KeyNumber1'])
+        eq_(sample_sheet2.TestingSection.KeyNumber1, 'DNAMatrix.txt')
 
     def test_write_invalid_num_blank_lines(self):
         """Test ``write()`` when given invalid number of blank lines"""
