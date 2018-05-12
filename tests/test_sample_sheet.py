@@ -476,6 +476,26 @@ class TestSampleSheet(TestCase):
         with open(infile, 'r', newline='\n', encoding='utf-8') as file_handle:
             self.assertMultiLineEqual(string_handle.read(), file_handle.read())
 
+    def test_write_custom_section(self):
+        """Test ``write()`` when a custom section is defined"""
+        # Create a ``SampleSheet`` with a [Manifests] section
+        sample_sheet1 = SampleSheet()
+        sample_sheet1.add_section('Manifests')
+        sample_sheet1.Manifests.PoolRNA = 'RNAMatrix.txt'
+        sample_sheet1.Manifests.PoolDNA = 'DNAMatrix.txt'
+
+        # Write to string and make temporary file
+        string_handle = StringIO(newline=None)
+        sample_sheet1.write(string_handle)
+        string_handle.seek(0)
+        filename = string_as_temporary_file(string_handle.read())
+
+        # Read temporary file and confirm section and it's data exists.
+        sample_sheet2 = SampleSheet(filename)
+        assert_list_equal(sample_sheet2.Manifests.keys, ['PoolRNA', 'PoolDNA'])
+        eq_(sample_sheet2.Manifests.PoolRNA, 'RNAMatrix.txt')
+        eq_(sample_sheet2.Manifests.PoolDNA, 'DNAMatrix.txt')
+
     def test_write_invalid_num_blank_lines(self):
         """Test ``write()`` when given invalid number of blank lines"""
         infile = RESOURCES / 'paired-end-single-index.csv'

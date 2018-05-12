@@ -326,9 +326,8 @@ class SampleSheet(object):
     comma. The sample sheet is composed of four sections, marked by a header.
 
         [Header]   : .ini convention
-        [Manifests]: .ini convention (optional)
-        [Settings] : .ini convention
         [<Other>]  : .ini convention (optional, multiple, user-defined)
+        [Settings] : .ini convention
         [Reads]    : .ini convention as a vertical array of items
         [Data]     : table with header
 
@@ -802,12 +801,13 @@ class SampleSheet(object):
             writer.writerow(pad_iterable([read], csv_width))
         write_blank_lines(writer)
 
-        # [Manifests] (Optional)
-        if hasattr(self, 'Manifests') and self.Manifests.keys:
-            writer.writerow(pad_iterable(['[Manifests]'], csv_width))
-            for attribute in self.Manifests.keys:
-                key = self.Manifests._key_map[attribute]
-                value = getattr(self.Manifests, attribute)
+        # [<Other>]
+        for section_name in self._sections:
+            writer.writerow(pad_iterable([f'[{section_name}]'], csv_width))
+            section = getattr(self, section_name)
+            for attribute in section.keys:
+                key = section._key_map[attribute]
+                value = getattr(section, attribute)
                 writer.writerow(pad_iterable([key, value], csv_width))
             write_blank_lines(writer)
 
