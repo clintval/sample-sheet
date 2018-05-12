@@ -115,6 +115,9 @@ sample_sheet.Header.IEM4FileVersion = 4
 # method and specify and alternate name.
 sample_sheet.Header.add_attr(attr='Investigator_Name', value='jdoe', name='Investigator Name')
 
+# An optional [Manifests] section can be added.
+sample_sheet.add_section('Manifests')
+
 # Fill out the [Settings] section of the sample sheet.
 sample_sheet.Settings.CreateFastqForIndexReads = 1
 sample_sheet.Settings.BarcodeMismatches = 2
@@ -139,6 +142,8 @@ Investigator Name,jdoe,
 [Reads],,
 151,,
 151,,
+,,
+[Manifests],,
 ,,
 [Settings],,
 CreateFastqForIndexReads,1,
