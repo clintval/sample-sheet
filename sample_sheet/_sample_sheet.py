@@ -66,6 +66,14 @@ class ReadStructure(object):
     This class does not currently support read structures where the last token
     has ambiguous length by using the <+> operator preceding the <type>.
 
+    Definitions of read structure types can be found at the following location:
+
+        https://github.com/nh13/read-structure-examples
+
+    Discussion on the topic in hts-specs:
+
+        https://github.com/samtools/hts-specs/issues/270
+
     """
     _token_pattern = re.compile(r'(\d+[BMST])')
 
