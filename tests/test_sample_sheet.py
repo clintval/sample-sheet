@@ -1,6 +1,7 @@
 from nose.tools import assert_false
 from nose.tools import assert_is_instance
 from nose.tools import assert_is_none
+from nose.tools import assert_list_equal
 from nose.tools import assert_raises
 from nose.tools import assert_true
 from nose.tools import eq_
@@ -450,6 +451,17 @@ class TestSampleSheet(TestCase):
             self.assertMultiLineEqual(
                 (prefix / 'library_params.2.txt').read_text(),
                 library_params.format(lane=2))
+
+    def test_add_section(self):
+        """Test ``add_section()`` to add a section and bind key:values to it"""
+        sample_sheet = SampleSheet()
+        sample_sheet.add_section('Manifests')
+        sample_sheet.Manifests.PoolRNA = 'RNAMatrix.txt'
+        sample_sheet.Manifests.PoolDNA = 'DNAMatrix.txt'
+
+        assert_list_equal(sample_sheet.Manifests.keys, ['PoolRNA', 'PoolDNA'])
+        eq_(sample_sheet.Manifests.PoolRNA, 'RNAMatrix.txt')
+        eq_(sample_sheet.Manifests.PoolDNA, 'DNAMatrix.txt')
 
     def test_write(self):
         """Test ``write()`` by comparing a roundtrip of a sample sheet"""
