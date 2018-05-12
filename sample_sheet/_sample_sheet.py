@@ -59,7 +59,7 @@ class ReadStructure(object):
     >>> rs.has_umi
     True
     >>> rs.tokens
-    ["10M", "141T", "8B"]
+    ['10M', '141T', '8B']
 
     Notes
     -----
@@ -195,7 +195,7 @@ class Sample(object):
     Sample({"Sample_ID": "87", "Sample_Name": "3T", "index": "A"})
     >>> sample = Sample({'Read_Structure': '151T'})
     >>> sample.Read_Structure
-    ReadStructure("151T")
+    ReadStructure(structure="151T")
 
     """
 
