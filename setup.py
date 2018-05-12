@@ -11,16 +11,24 @@ except (ImportError, OSError):
         long_description = f.read()
 
 
+PACKAGE = 'sample_sheet'
+PACKAGE_NAME = 'sample-sheet'
+VERSION = '0.5.0'
+
+URL = f'https://github.com/clintval/{PACKAGE_NAME}'
+ARTIFACT = f'https://github.com/clintval/{PACKAGE_NAME}/archive/v{VERSION}.tar.gz'  # noqa
+
 setup(
-    name='sample_sheet',
+    name=PACKAGE,
     packages=find_packages(),
-    version='0.4.0',
+    version=VERSION,
     description='An Illumina Sample Sheet parsing utility.',
     long_description=long_description,
+    long_description_content_type='text/markdown',
     author='clintval',
     author_email='valentine.clint@gmail.com',
-    url='https://github.com/clintval/sample-sheet',
-    download_url='https://github.com/clintval/sample-sheet/archive/v0.4.0.tar.gz',  # noqa
+    url=URL,
+    download_url=ARTIFACT,
     install_requires=[
         'click',
         'smart_open>=1.5.4',
@@ -29,10 +37,9 @@ setup(
     ],
     extras_require={
         'ci': ['nose', 'codecov'],
-        'fancytest': ['nose', 'nose-progressive', 'coverage'],
+        'fancytest': ['nose', 'coverage'],
     },
     scripts=[
-#        'scripts/csv-whitespace-strip',
         'scripts/sample-sheet',
     ],
     license='MIT',
