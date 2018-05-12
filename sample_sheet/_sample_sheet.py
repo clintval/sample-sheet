@@ -20,10 +20,12 @@ __all__ = [
     'Sample',
     'SampleSheet']
 
+DESIGN_HEADER = ['Sample_ID', 'Sample_Name', 'Library_ID', 'Description']
+RECOMMENDED_KEYS = ['Sample_ID', 'Sample_Name', 'index']
+REQUIRED_SECTIONS = ['Header', 'Settings', 'Reads', 'Data']
+
 # The minimum column with of a detected TTY for wrapping text in CLI columns.
 MIN_WIDTH = 10
-
-RECOMMENDED_KEYS = ['Sample_ID', 'Sample_Name', 'index']
 
 # From the section "Character Encoding" in the Illumina format specification.
 #
@@ -33,7 +35,7 @@ RECOMMENDED_KEYS = ['Sample_ID', 'Sample_Name', 'index']
 VALID_ASCII = set(ascii_letters + digits + punctuation + ' \n\r')
 
 
-class ReadStructure:
+class ReadStructure(object):
     """An object describing the order, number, and type of bases in a read.
 
     A read structure is a sequence of tokens in the form <number><type> where
@@ -57,12 +59,20 @@ class ReadStructure:
     >>> rs.has_umi
     True
     >>> rs.tokens
-    ["10M", "141T", "8B"]
+    ['10M', '141T', '8B']
 
     Notes
     -----
     This class does not currently support read structures where the last token
     has ambiguous length by using the <+> operator preceding the <type>.
+
+    Definitions of read structure types can be found at the following location:
+
+        https://github.com/nh13/read-structure-examples
+
+    Discussion on the topic in hts-specs:
+
+        https://github.com/samtools/hts-specs/issues/270
 
     """
     _token_pattern = re.compile(r'(\d+[BMST])')
@@ -102,7 +112,7 @@ class ReadStructure:
 
     @property
     def is_paired_end(self) -> bool:
-        """Return if this read structure is paired-end"""
+        """Return if this read structure is paired-end."""
         return len(self._template_pattern.findall(self.structure)) == 2
 
     @property
@@ -171,7 +181,7 @@ class ReadStructure:
         return self.structure
 
 
-class Sample:
+class Sample(object):
     """A single sample for a sample sheet.
 
     This class is built with the keys and values in the [Data] section of the
@@ -193,20 +203,19 @@ class Sample:
     Sample({"Sample_ID": "87", "Sample_Name": "3T", "index": "A"})
     >>> sample = Sample({'Read_Structure': '151T'})
     >>> sample.Read_Structure
-    ReadStructure("151T")
+    ReadStructure(structure="151T")
 
     """
 
     def __init__(self, mappable: Union[None, Mapping]=None):
         mappable = dict() if mappable is None else mappable
-
         self._other_keys = set()
 
         self._whitespace_re = re.compile(r'\s+')
         self._valid_index_key_pattern = re.compile(r'index2?')
         self._valid_index_value_pattern = re.compile(r'^[ACGTN]*$')
 
-        # Default attributes for recommended keys are empty strings.
+        # Explicitly define the recommended keys as None.
         for key in RECOMMENDED_KEYS:
             setattr(self, key, None)
 
@@ -274,7 +283,7 @@ class Sample:
         return str(self.Sample_ID)
 
 
-class SampleSheetSection:
+class SampleSheetSection(object):
     def __init__(self):
         self.__dict__['keys'] = []
         self.__dict__['_key_map'] = {}
@@ -316,7 +325,7 @@ class SampleSheetSection:
         return f'{self.__class__.__name__}'
 
 
-class SampleSheet:
+class SampleSheet(object):
     """A representation of an Illumina sample sheet.
 
     A sample sheet document almost conform to the .ini standards, but does not,
@@ -325,6 +334,7 @@ class SampleSheet:
     comma. The sample sheet is composed of four sections, marked by a header.
 
         [Header]   : .ini convention
+        [<Other>]  : .ini convention (optional, multiple, user-defined)
         [Settings] : .ini convention
         [Reads]    : .ini convention as a vertical array of items
         [Data]     : table with header
@@ -343,6 +353,7 @@ class SampleSheet:
         self.path = path
 
         self._samples = []
+        self._sections = []
 
         self.Reads = []
         self.Read_Structure = None
@@ -386,13 +397,16 @@ class SampleSheet:
         reader = csv.reader(handle, skipinitialspace=True)
         return reader
 
+    def add_section(self, section_name):
+        """Add a section to the ``SampleSheet``."""
+        section_name = self._whitespace_re.sub('_', section_name)
+        self._sections.append(section_name)
+        setattr(self, section_name, SampleSheetSection())
+
     @property
     def all_sample_keys(self) -> set:
         """Return the unique keys of all samples in this ``SampleSheet``."""
-        all_keys = set()
-        for sample in self:
-            all_keys.update(sample.keys())
-        return all_keys
+        return set(chain.from_iterable([sample.keys() for sample in self]))
 
     @property
     def experimental_design(self):
@@ -404,17 +418,16 @@ class SampleSheet:
 
         Returns
         -------
-        markdown : str or IPython.core.display.Markdown
+        markdown : str, IPython.core.display.Markdown
             A visual table of IDs and names for all samples in Markdown.
 
         """
         if not self.samples:
             raise ValueError('No samples in sample sheet')
 
-        header = ['Sample_ID', 'Sample_Name', 'Library_ID', 'Description']
         markdown = tabulate(
-            [[getattr(s, h, '') for h in header] for s in self.samples],
-            headers=header,
+            [[getattr(s, h, '') for h in DESIGN_HEADER] for s in self.samples],
+            headers=DESIGN_HEADER,
             tablefmt='pipe')
 
         if is_ipython_interpreter():  # pragma:  no cover
@@ -439,9 +452,17 @@ class SampleSheet:
         return self._samples
 
     def _parse(self, path: Union[str, Path]):
-        section = sample_header = None
+        section_name = None
+        sample_header = None
 
         for i, line in enumerate(self._make_csv_reader(path)):
+            header_match = self._section_header_re.match(line[0])
+
+            # Skip to next line if this line is empty.
+            if not ''.join(line).strip():
+                continue
+
+            # Raise exception if we encounter invalid characters.
             if (
                 any(character not in VALID_ASCII
                     for character in set(''.join(line)))
@@ -450,43 +471,41 @@ class SampleSheet:
                     f'Sample sheet contains invalid characters on line '
                     f'{i + 1}: {"".join(line)}')
 
-            if not ''.join(line):
-                # Skip any line that is completely empty.
+            # If we enter a section save it's name and continue to next line.
+            if header_match:
+                section_name, *_ = header_match.groups()
+                if not hasattr(self, section_name) and section_name != 'Data':
+                    self.add_section(section_name)
                 continue
 
-            line_is_a_section = self._section_header_re.match(line[0])
-
-            if line_is_a_section:
-                section, *_ = line_is_a_section.groups()
-
-            elif section in ('Header', 'Settings'):
-                # Get either self.Header or self.Settings and add the
-                # formatted attribute.
-                original_key, value, *_ = line
-                getattr(self, section).add_attr(
-                    attr=self._whitespace_re.sub('_', original_key),
-                    value=value,
-                    name=original_key)
-
-            elif section == 'Reads':
+            # [Reads] - vertical list of integers.
+            if section_name == 'Reads':
                 self.Reads.append(int(line[0]))
+                continue
 
-            elif section == 'Data':
-                if sample_header is None:
-                    # Ensure the column names for all samples are not empty.
-                    if any(key == '' for key in line):
-                        raise ValueError(
-                            f'Header for [Data] section is not allowed to '
-                            f'have empty fields: {line}')
+            # [Data] - delimited data with the first line a header.
+            if section_name == 'Data':
+                if sample_header is not None:
+                    self.add_sample(Sample(dict(zip(sample_header, line))))
+                elif any(key == '' for key in line):
+                    raise ValueError(
+                        f'Header for [Data] section is not allowed to '
+                        f'have empty fields: {line}')
+                else:
                     sample_header = line
-                    continue
+                continue
 
-                self.add_sample(Sample(dict(zip(sample_header, line))))
+            # [<Other>] - keys in first column and values in second column.
+            original_key, value, *_ = line
+            getattr(self, section_name).add_attr(
+                attr=self._whitespace_re.sub('_', original_key),
+                value=value,
+                name=original_key)
 
     def add_sample(self, sample: Sample):
-        """Validate and add a ``Sample`` to this ``SampleSheet``.
+        """Add a ``Sample`` to this ``SampleSheet``.
 
-        All samples are validated against the first sampled added to the sample
+        All samples are validated against the first sample added to the sample
         sheet to ensure there are no ID collisions or incompatible read
         structures (if supplied). All samples are also validated against the
         [Reads] section of the sample sheet if it has been defined.
@@ -790,6 +809,16 @@ class SampleSheet:
             writer.writerow(pad_iterable([read], csv_width))
         write_blank_lines(writer)
 
+        # [<Other>]
+        for section_name in self._sections:
+            writer.writerow(pad_iterable([f'[{section_name}]'], csv_width))
+            section = getattr(self, section_name)
+            for attribute in section.keys:
+                key = section._key_map[attribute]
+                value = getattr(section, attribute)
+                writer.writerow(pad_iterable([key, value], csv_width))
+            write_blank_lines(writer)
+
         # [Settings]
         writer.writerow(pad_iterable(['[Settings]'], csv_width))
         for attribute in self.Settings.keys:
@@ -814,8 +843,7 @@ class SampleSheet:
 
     def __iter__(self):
         """Iterating over a ``SampleSheet`` will emit its samples."""
-        for sample in self.samples:
-            yield sample
+        yield from self.samples
 
     def __repr__(self):
         """Show the constructor command to initialize this object."""

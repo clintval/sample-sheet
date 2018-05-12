@@ -22,6 +22,9 @@
 
 <br>
 
+The intent of this library is to obviate the need to use Illumina's proprietary [Experiment Manager](https://support.illumina.com/sequencing/sequencing_software/experiment_manager.html) and to enable interactive reading, _de novo_ creation, and writing of Sample Sheets for all Illumina platforms.
+As of `v0.5.0` this library supports the entire Illumina specification for a sample sheet as defined in [this manual](https://www.illumina.com/content/dam/illumina-marketing/documents/products/technotes/sequencing-sheet-format-specifications-technical-note-970-2017-004.pdf).
+
 <h3 align="center">Installation</h3>
 
 ```
@@ -33,14 +36,7 @@
 <h3 align="center">Tutorial</h3>
 
 
-A test sample sheet at an HTTPS endpoint will be used to demonstrate the library. The test file can also be found in the relative location: [`sample-sheet/tests/resources/paired-end-single-index.csv`](tests/resources/paired-end-single-index.csv).
-
-The following URIs types are supported for reading sample sheets.
-
-- S3
-- HDFS
-- WebHDFS
-- HTTP
+To demonstrate the features of this library we a test file available in this repostiory at the relative location: [`sample-sheet/tests/resources/paired-end-single-index.csv`](tests/resources/paired-end-single-index.csv).
 
 ```python
 from sample_sheet import SampleSheet
@@ -101,7 +97,7 @@ ReadStructure(structure="151T8B151T")
 
 #### Sample Sheet Creation
 
-Sample sheets can be created _de novo_ and written to a file-like object:
+Sample sheets can be created _de novo_ and written to a file-like object. The following snippet shows how to add attributes to mandatory sections, add optional user-defined sections, and add samples before writing the file to a file-like object.
 
 ```python
 import sys
@@ -114,6 +110,9 @@ sample_sheet.Header.IEM4FileVersion = 4
 # If you want to use a key with whitespace it in you must use the `add_attr`
 # method and specify and alternate name.
 sample_sheet.Header.add_attr(attr='Investigator_Name', value='jdoe', name='Investigator Name')
+
+# An optional [Manifests] section can be added.
+sample_sheet.add_section('Manifests')
 
 # Fill out the [Settings] section of the sample sheet.
 sample_sheet.Settings.CreateFastqForIndexReads = 1
@@ -139,6 +138,8 @@ Investigator Name,jdoe,
 [Reads],,
 151,,
 151,,
+,,
+[Manifests],,
 ,,
 [Settings],,
 CreateFastqForIndexReads,1,
