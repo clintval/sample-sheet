@@ -69,7 +69,7 @@ class TestSample(TestCase):
         assert_raises(ValueError, Sample, {'index2': 'ACUGTN'})
 
     def test_eq(self):
-        """Test equality  based only on ``Sample_ID`` and ``Library_ID``."""
+        """Test equality based only on ``Sample_ID`` and ``Library_ID``."""
         fake1 = Sample({'Sample_ID': 1, 'Library_ID': '10x'})
         fake2 = Sample({'Sample_ID': 1})
 

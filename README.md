@@ -22,7 +22,7 @@
 
 <br>
 
-The intent of this library is to obviate the need to use Illumina's proprietary [Experiment Manager](https://support.illumina.com/sequencing/sequencing_software/experiment_manager.html) and to enable interactive reading, _de novo_ creation, and writing of Sample Sheets for all Illumina platforms.
+The intent of this library is to obviate the need to use Illumina's proprietary [Experiment Manager](https://support.illumina.com/sequencing/sequencing_software/experiment_manager.html) and to enable interactive reading, _de novo_ creation, and writing of Sample Sheets.
 As of `v0.5.0` this library supports the entire Illumina specification for a sample sheet as defined in [this manual](https://www.illumina.com/content/dam/illumina-marketing/documents/products/technotes/sequencing-sheet-format-specifications-technical-note-970-2017-004.pdf).
 
 <h3 align="center">Installation</h3>
@@ -35,14 +35,14 @@ As of `v0.5.0` this library supports the entire Illumina specification for a sam
 
 <h3 align="center">Tutorial</h3>
 
+To demonstrate the features of this library we will use a test file available at this remote location:
 
-To demonstrate the features of this library we a test file available in this repostiory at the relative location: [`sample-sheet/tests/resources/paired-end-single-index.csv`](tests/resources/paired-end-single-index.csv).
+- [`sample-sheet/tests/resources/paired-end-single-index.csv`](tests/resources/paired-end-single-index.csv)
 
 ```python
 from sample_sheet import SampleSheet
 
-host = 'https://raw.githubusercontent.com/'
-url = host + 'clintval/sample-sheet/master/tests/resources/paired-end-single-index.csv'
+url = 'https://raw.githubusercontent.com/clintval/sample-sheet/master/tests/resources/paired-end-single-index.csv'
 
 sample_sheet = SampleSheet(url)
 ```
@@ -97,35 +97,34 @@ ReadStructure(structure="151T8B151T")
 
 #### Sample Sheet Creation
 
-Sample sheets can be created _de novo_ and written to a file-like object. The following snippet shows how to add attributes to mandatory sections, add optional user-defined sections, and add samples before writing the file to a file-like object.
+Sample sheets can be created _de novo_ and written to a file-like object. The following snippet shows how to add attributes to mandatory sections, add optional user-defined sections, and add samples before writing to the standard output.
 
 ```python
 import sys
 
 sample_sheet = SampleSheet()
 
-# Fill out the [Header] section of the sample sheet.
+# [Header] section
+# Adding an attribute with spaces must be done with the add_attr() method
 sample_sheet.Header.IEM4FileVersion = 4
-
-# If you want to use a key with whitespace it in you must use the `add_attr`
-# method and specify and alternate name.
 sample_sheet.Header.add_attr(attr='Investigator_Name', value='jdoe', name='Investigator Name')
 
-# An optional [Manifests] section can be added.
-sample_sheet.add_section('Manifests')
-
-# Fill out the [Settings] section of the sample sheet.
+# [Settings] section
 sample_sheet.Settings.CreateFastqForIndexReads = 1
 sample_sheet.Settings.BarcodeMismatches = 2
 
-# Create a paired-end flowcell with 151 template bases.
+# Optional sample sheet sections can be added and then accessed
+sample_sheet.add_section('Manifests')
+sample_sheet.Manifests.PoolDNA = "DNAMatrix.txt"
+
+# Specify a paired-end kit with 151 template bases per read
 sample_sheet.Reads = [151, 151]
 
-# Create your first single-indexed sample with both a name and ID.
+# Add a single-indexed sample with both a name, ID, and index
 sample = Sample(dict(Sample_ID='1823A', Sample_Name='1823A-tissue', index='ACGT'))
-
 sample_sheet.add_sample(sample)
 
+# Write to standard outpout!
 sample_sheet.write(sys.stdout)
 ```
 
@@ -140,6 +139,7 @@ Investigator Name,jdoe,
 151,,
 ,,
 [Manifests],,
+PoolDNA,DNAMatrix.txt,
 ,,
 [Settings],,
 CreateFastqForIndexReads,1,
@@ -228,7 +228,7 @@ To make a development install:
 
 ```bash
 ❯ git clone git@github.com:clintval/sample-sheet.git
-❯ pip install -e 'sample-sheet[fancytest]'
+❯ pip install -e 'sample-sheet[ci]'
 ```
 
 To run the tests:

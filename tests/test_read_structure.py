@@ -92,7 +92,7 @@ class TestReadStructure(TestCase):
             ['8M', '1S', '142T', '8B', '8B', '8M', '1S', '142T'])
 
     def test_copy(self):
-        """Tests a shallow copy"""
+        """Test a shallow copy with ``copy()``"""
         read_structure1 = ReadStructure('115T')
         read_structure2 = read_structure1.copy()
         assert_not_equal(id(read_structure1), id(read_structure2))

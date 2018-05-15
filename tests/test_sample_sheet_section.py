@@ -9,7 +9,7 @@ from sample_sheet._sample_sheet import SampleSheetSection
 
 
 class TestSampleSheetSection(TestCase):
-    """Unit Test for ``SampleSheetSection``"""
+    """Unit tests for ``SampleSheetSection``"""
 
     def test_add_attribute(self):
         """Test ``add_attr()`` to update ``_key_map`` appropriately"""
@@ -38,6 +38,7 @@ class TestSampleSheetSection(TestCase):
             assert_is_none(getattr(SampleSheetSection(), key))
 
     def test_eq(self):
+        """Test ``SampleSheetSection.__eq__()``"""
         section1 = SampleSheetSection()
         section2 = SampleSheetSection()
         section1.test_key = 200
@@ -45,5 +46,5 @@ class TestSampleSheetSection(TestCase):
         eq_(section1, section2)
 
     def test_repr(self):
-        """Test ``__repr__()``"""
+        """Test ``SampleSheetSection.__repr__()``"""
         eq_(SampleSheetSection().__repr__(), 'SampleSheetSection')
