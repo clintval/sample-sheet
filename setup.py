@@ -1,14 +1,8 @@
-from setuptools import find_packages, setup
+from setuptools import find_packages
+from setuptools import setup
 
-
-try:
-    import pypandoc
-    long_description = pypandoc.convert_file('README.md', 'rst')
-    long_description = long_description.replace('\r', '')
-except (ImportError, OSError):
-    import io
-    with io.open('README.md', encoding='utf-8') as f:
-        long_description = f.read()
+with open('README.md', encoding='utf-8') as handle:
+    long_description = handle.read()
 
 
 PACKAGE = 'sample_sheet'
@@ -35,13 +29,8 @@ setup(
         'tabulate',
         'terminaltables',
     ],
-    extras_require={
-        'ci': ['nose', 'codecov'],
-        'fancytest': ['nose', 'coverage'],
-    },
-    scripts=[
-        'scripts/sample-sheet',
-    ],
+    extras_require={'ci': ['nose', 'codecov']},
+    scripts=['scripts/sample-sheet'],
     license='MIT',
     zip_safe=True,
     keywords='illumina samplesheet sample sheet parser bioinformatics',
@@ -52,5 +41,6 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ]
 )

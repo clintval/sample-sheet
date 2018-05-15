@@ -273,6 +273,7 @@ class TestSampleSheet(TestCase):
             {'Sample_ID', 'Sample_Name', 'index', 'Key1', 'Key2'})
 
     def test_parse_invalid_ascii(self):
+        """Test exception with invalid characters"""
         filename = string_as_temporary_file(
             '[Header],\n'
             ',\n'
@@ -287,6 +288,7 @@ class TestSampleSheet(TestCase):
         assert_raises(ValueError, SampleSheet, filename)
 
     def test_parse_different_length_header(self):
+        """Test the need for the same length header as data"""
         filename = string_as_temporary_file(
             '[Header],,\n'
             ',,\n'
