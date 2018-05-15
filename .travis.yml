@@ -13,14 +13,14 @@ install:
 script:
   - |
     nosetests \
-    --verbosity=2 \
-    --ignore-files '^\.'\
-    --ignore-files '^setup\.py$' \
-    --with-doctest \
-    --with-coverage \
-    --cover-package=sample_sheet \
-    --cover-xml \
-    --where .
+      --verbosity=2 \
+      --ignore-files '^\.'\
+      --ignore-files '^setup\.py$' \
+      --with-doctest \
+      --with-coverage \
+      --cover-package=sample_sheet \
+      --cover-xml \
+      --where .
 
 after_success:
   - codecov
