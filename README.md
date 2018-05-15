@@ -174,48 +174,45 @@ A quick summary of the samples can be displayed in Markdown ASCII or HTML render
 
 <h3 align="center">Command Line Utility</h3>
 
-Prints a tabular summary of the sample sheet.
+Along with an option for pretty-printing the sample sheet to terminal (`summary` tool), one can stream the sample sheet into JSON:
 
 ```bash
-❯ sample-sheet summary paired-end-single-index.csv
-┌Header─────────────┬─────────────────────────────────┐
-│ IEM1FileVersion   │ 4                               │
-│ Investigator_Name │ jdoe                            │
-│ Experiment_Name   │ exp001                          │
-│ Date              │ 11/16/2017                      │
-│ Workflow          │ SureSelectXT                    │
-│ Application       │ NextSeq FASTQ Only              │
-│ Assay             │ SureSelectXT                    │
-│ Description       │ A description of this flow cell │
-│ Chemistry         │ Default                         │
-└───────────────────┴─────────────────────────────────┘
-┌Settings──────────────────┬──────────┐
-│ CreateFastqForIndexReads │ 1        │
-│ BarcodeMismatches        │ 2        │
-│ Reads                    │ 151, 151 │
-└──────────────────────────┴──────────┘
-┌Identifiers┬──────────────┬────────────┬──────────┬────────┐
-│ Sample_ID │ Sample_Name  │ Library_ID │ index    │ index2 │
-├───────────┼──────────────┼────────────┼──────────┼────────┤
-│ 1823A     │ 1823A-tissue │ 2017-01-20 │ GAATCTGA │        │
-│ 1823B     │ 1823B-tissue │ 2017-01-20 │ AGCAGGAA │        │
-│ 1824A     │ 1824A-tissue │ 2017-01-20 │ GAGCTGAA │        │
-│ 1825A     │ 1825A-tissue │ 2017-01-20 │ AAACATCG │        │
-│ 1826A     │ 1826A-tissue │ 2017-01-20 │ GAGTTAGC │        │
-│ 1826B     │ 1823A-tissue │ 2017-01-17 │ CGAACTTA │        │
-│ 1829A     │ 1823B-tissue │ 2017-01-17 │ GATAGACA │        │
-└───────────┴──────────────┴────────────┴──────────┴────────┘
-┌Descriptions──────────────────┐
-│ Sample_ID │ Description      │
-├───────────┼──────────────────┤
-│ 1823A     │ 0.5x treatment   │
-│ 1823B     │ 0.5x treatment   │
-│ 1824A     │ 1.0x treatment   │
-│ 1825A     │ 10.0x treatment  │
-│ 1826A     │ 100.0x treatment │
-│ 1826B     │ 0.5x treatment   │
-│ 1829A     │ 0.5x treatment   │
-└───────────┴──────────────────┘
+❯ sample-sheet to_json paired-end-single-index.csv | jq
+{
+  "Header": {
+    "IEM1FileVersion": "4",
+    "Investigator Name": "jdoe",
+    "Experiment Name": "exp001",
+    "Date": "11/16/2017",
+    "Workflow": "SureSelectXT",
+    "Application": "NextSeq FASTQ Only",
+    "Assay": "SureSelectXT",
+    "Description": "A description of this flow cell",
+    "Chemistry": "Default"
+  },
+  "Reads": [
+    151,
+    151
+  ],
+  "Settings": {
+    "CreateFastqForIndexReads": "1",
+    "BarcodeMismatches": "2"
+  },
+  "Data": [
+    {
+      "Sample_Project": "exp001",
+      "Description": "0.5x treatment",
+      "Reference_Name": "mm10",
+      "Sample_Name": "1823A-tissue",
+      "index": "GAATCTGA",
+      "Library_ID": "2017-01-20",
+      "Read_Structure": "151T8B151T",
+      "Sample_ID": "1823A",
+      "Target_Set": "Intervals-001"
+    },
+    ...
+  ]
+}
 ```
 
 <br>

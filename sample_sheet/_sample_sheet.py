@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 import os
 import re
 import sys
@@ -259,6 +260,10 @@ class Sample(object):
         """Return all public attributes."""
         return set(RECOMMENDED_KEYS).union(self._other_keys)
 
+    def to_dict(self):
+        """Return the key value pairs associated with this ``Sample``"""
+        return {key: str(getattr(self, key)) for key in self.keys()}
+
     def __getattr__(self, attr):
         """Return ``None`` if an attribute is undefined."""
         return self.__dict__.get(attr)
@@ -306,6 +311,10 @@ class SampleSheetSection(object):
             raise ValueError('Attributes may not contain whitespace')
         setattr(self, attr, value)
         self._key_map[attr] = name or attr
+
+    def to_dict(self) -> Mapping:
+        """Return the key values pairs attached to this section."""
+        return {self._key_map[attr]: getattr(self, attr) for attr in self.keys}
 
     def __getattr__(self, attr):
         """Return ``None`` If an attribute does not exist."""
@@ -621,6 +630,25 @@ class SampleSheet(object):
         for sample in samples:
             self.add_sample(sample)
 
+    def to_json(self, **kwargs) -> str:
+        """Write this ``SampleSheet`` to JSON.
+
+        Return
+        ------
+        content : str
+            The JSON dump of all entries in this sample sheet.
+
+        """
+        content = {
+            'Header': self.Header.to_dict(),
+            'Reads': self.Reads,
+            'Settings': self.Settings.to_dict(),
+            'Data': [sample.to_dict() for sample in self.samples],
+            **{title: getattr(self, title).to_dict() for
+               title in self._sections}
+        }
+        return json.dumps(content, **kwargs)
+
     def to_picard_basecalling_params(
         self,
         directory: Union[str, Path],
@@ -784,6 +812,7 @@ class SampleSheet(object):
         """
         writer = csv.writer(handle)
         csv_width = max(len(RECOMMENDED_KEYS), len(self.all_sample_keys))
+        section_order = ['Header', 'Reads'] + self._sections + ['Settings']
 
         if not isinstance(blank_lines, int) or blank_lines <= 0:
             raise ValueError('Number of blank lines must be a positive int.')
@@ -795,39 +824,17 @@ class SampleSheet(object):
             for i in range(n):
                 writer.writerow(pad_iterable([], width))
 
-        # [Header]
-        writer.writerow(pad_iterable(['[Header]'], csv_width))
-        for attribute in self.Header.keys:
-            key = self.Header._key_map[attribute]
-            value = getattr(self.Header, attribute)
-            writer.writerow(pad_iterable([key, value], csv_width))
-        write_blank_lines(writer)
-
-        # [Reads]
-        writer.writerow(pad_iterable(['[Reads]'], csv_width))
-        for read in self.Reads:
-            writer.writerow(pad_iterable([read], csv_width))
-        write_blank_lines(writer)
-
-        # [<Other>]
-        for section_name in self._sections:
-            writer.writerow(pad_iterable([f'[{section_name}]'], csv_width))
-            section = getattr(self, section_name)
-            for attribute in section.keys:
-                key = section._key_map[attribute]
-                value = getattr(section, attribute)
-                writer.writerow(pad_iterable([key, value], csv_width))
+        for title in section_order:
+            writer.writerow(pad_iterable([f'[{title}]'], csv_width))
+            section = getattr(self, title)
+            if title == 'Reads':
+                for read in self.Reads:
+                    writer.writerow(pad_iterable([read], csv_width))
+            else:
+                for key, value in section.to_dict().items():
+                    writer.writerow(pad_iterable([key, value], csv_width))
             write_blank_lines(writer)
 
-        # [Settings]
-        writer.writerow(pad_iterable(['[Settings]'], csv_width))
-        for attribute in self.Settings.keys:
-            key = self.Settings._key_map[attribute]
-            value = getattr(self.Settings, attribute)
-            writer.writerow(pad_iterable([key, value], csv_width))
-        write_blank_lines(writer)
-
-        # [Data]
         writer.writerow(pad_iterable(['[Data]'], csv_width))
         other_keys = self.all_sample_keys - set(RECOMMENDED_KEYS)
         samples_header = RECOMMENDED_KEYS + sorted(other_keys)
