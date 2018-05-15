@@ -16,5 +16,12 @@ def summary(path):
     print(SampleSheet(path))
 
 
+@cli.command()
+@click.argument('path')
+def to_json(path):
+    """Stream this sample sheet into JSON"""
+    print(SampleSheet(path).to_json())
+
+
 if __name__ == '__main__':
     cli()

@@ -1,4 +1,5 @@
 from nose.tools import assert_is_none
+from nose.tools import assert_dict_equal
 from nose.tools import assert_raises
 from nose.tools import eq_
 
@@ -36,6 +37,19 @@ class TestSampleSheetSection(TestCase):
         """Test that accessing an unknown attribute returns None"""
         for key in ('not_real', 'fake'):
             assert_is_none(getattr(SampleSheetSection(), key))
+
+    def test_to_dict(self):
+        """Test ``SampleSheetSection.to_dict()``"""
+        params = {
+            'test_key': '200',
+            'another_test': 'section_testing',
+        }
+
+        section = SampleSheetSection()
+        for pair in params.items():
+            section.add_attr(*pair)
+
+        assert_dict_equal(params, section.to_dict())
 
     def test_eq(self):
         """Test ``SampleSheetSection.__eq__()``"""

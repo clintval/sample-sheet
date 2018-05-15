@@ -1,5 +1,6 @@
 from nose.tools import assert_is_instance
 from nose.tools import assert_is_none
+from nose.tools import assert_dict_equal
 from nose.tools import assert_not_equal
 from nose.tools import assert_raises
 from nose.tools import assert_set_equal
@@ -67,6 +68,18 @@ class TestSample(TestCase):
         eq_(Sample({'index': 'ACGTN'}).index, 'ACGTN')
         assert_raises(ValueError, Sample, {'index': 'ACUGTN'})
         assert_raises(ValueError, Sample, {'index2': 'ACUGTN'})
+
+    def test_to_dict(self):
+        """Test ``Sample.to_dict()``, and all values strings"""
+        params = {
+            'Sample_ID': '1',
+            'Sample_Name': '1',
+            'Library_ID': '10x',
+            'Lane': '1',
+            'index': 'ATCTG',
+            'Read_Structure': '151T'
+        }
+        assert_dict_equal(params, Sample(params).to_dict())
 
     def test_eq(self):
         """Test equality based only on ``Sample_ID`` and ``Library_ID``."""

@@ -465,6 +465,54 @@ class TestSampleSheet(TestCase):
         eq_(sample_sheet.Manifests.PoolRNA, 'RNAMatrix.txt')
         eq_(sample_sheet.Manifests.PoolDNA, 'DNAMatrix.txt')
 
+    def test_to_json(self):
+        """Test ``SampleSheet.to_json()`` all output"""
+        sample_sheet = SampleSheet()
+        sample_sheet.Header.IEM4FileVersion = 4
+        sample_sheet.Header.add_attr(
+            attr='Investigator_Name',
+            value='jdoe',
+            name='Investigator Name')
+        sample_sheet.Settings.CreateFastqForIndexReads = 1
+        sample_sheet.Settings.BarcodeMismatches = 2
+        sample_sheet.add_section('Manifests')
+        sample_sheet.Manifests.PoolDNA = "DNAMatrix.txt"
+        sample_sheet.Reads = [151, 151]
+        sample = Sample({
+            'Sample_ID': '1823A',
+            'Sample_Name': '1823A-tissue',
+            'index': 'ACGT'
+        })
+        sample_sheet.add_sample(sample)
+        actual = sample_sheet.to_json(indent=4, sort_keys=True)
+        expected = (
+            '{\n'
+            '    "Data": [\n'
+            '        {\n'
+            '            "Sample_ID": "1823A",\n'
+            '            "Sample_Name": "1823A-tissue",\n'
+            '            "index": "ACGT"\n'
+            '        }\n'
+            '    ],\n'
+            '    "Header": {\n'
+            '        "IEM4FileVersion": 4,\n'
+            '        "Investigator Name": "jdoe"\n'
+            '    },\n'
+            '    "Manifests": {\n'
+            '        "PoolDNA": "DNAMatrix.txt"\n'
+            '    },\n'
+            '    "Reads": [\n'
+            '        151,\n'
+            '        151\n'
+            '    ],\n'
+            '    "Settings": {\n'
+            '        "BarcodeMismatches": 2,\n'
+            '        "CreateFastqForIndexReads": 1\n'
+            '    }\n'
+            '}'
+        )
+        eq_(expected, actual)
+
     def test_write(self):
         """Test ``write()`` by comparing a roundtrip of a sample sheet"""
         infile = RESOURCES / 'paired-end-single-index.csv'
