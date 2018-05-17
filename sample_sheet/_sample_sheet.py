@@ -465,9 +465,11 @@ class SampleSheet(object):
         sample_header = None
 
         for i, line in enumerate(self._make_csv_reader(path)):
-            header_match = self._section_header_re.match(line[0])
-
-            # Skip to next line if this line is empty.
+            # Skip to next line if this line is empty to support formats of
+            # sample sheets with multiple newlines as section seperators.
+            #
+            #   https://github.com/clintval/sample-sheet/issues/46
+            #
             if not ''.join(line).strip():
                 continue
 
@@ -479,6 +481,8 @@ class SampleSheet(object):
                 raise ValueError(
                     f'Sample sheet contains invalid characters on line '
                     f'{i + 1}: {"".join(line)}')
+
+            header_match = self._section_header_re.match(line[0])
 
             # If we enter a section save it's name and continue to next line.
             if header_match:
@@ -493,7 +497,7 @@ class SampleSheet(object):
                 continue
 
             # [Data] - delimited data with the first line a header.
-            if section_name == 'Data':
+            elif section_name == 'Data':
                 if sample_header is not None:
                     self.add_sample(Sample(dict(zip(sample_header, line))))
                 elif any(key == '' for key in line):
@@ -505,11 +509,13 @@ class SampleSheet(object):
                 continue
 
             # [<Other>] - keys in first column and values in second column.
-            original_key, value, *_ = line
-            getattr(self, section_name).add_attr(
-                attr=self._whitespace_re.sub('_', original_key),
-                value=value,
-                name=original_key)
+            else:
+                original_key, value, *_ = line
+                getattr(self, section_name).add_attr(
+                    attr=self._whitespace_re.sub('_', original_key),
+                    value=value,
+                    name=original_key)
+                continue
 
     def add_sample(self, sample: Sample):
         """Add a ``Sample`` to this ``SampleSheet``.
