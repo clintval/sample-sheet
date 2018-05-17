@@ -523,8 +523,22 @@ class TestSampleSheet(TestCase):
 
         string_handle.seek(0)
 
-        with open(infile, 'r', newline='\n', encoding='utf-8') as file_handle:
-            self.assertMultiLineEqual(string_handle.read(), file_handle.read())
+        with open(infile, 'r', newline='\n', encoding='utf-8') as handle:
+            self.assertMultiLineEqual(string_handle.read(), handle.read())
+
+    def test_no_line_comma_pad_read_and_write_with_padding(self):
+        """Test ``SampleSheet()`` for reading non-comma line padded input"""
+        infile_pad = RESOURCES / 'paired-end-single-index.csv'
+        infile_no_pad = RESOURCES / 'paired-end-single-index-no-pad.csv'
+        sample_sheet = SampleSheet(infile_no_pad)
+
+        string_handle = StringIO(newline=None)
+        sample_sheet.write(string_handle)
+
+        string_handle.seek(0)
+
+        with open(infile_pad, 'r', newline='\n', encoding='utf-8') as handle:
+            self.assertMultiLineEqual(string_handle.read(), handle.read())
 
     def test_write_custom_section(self):
         """Test ``write()`` when a custom section is defined"""
