@@ -23,7 +23,7 @@
 <br>
 
 The intent of this library is to obviate the need to use Illumina's proprietary [Experiment Manager](https://support.illumina.com/sequencing/sequencing_software/experiment_manager.html) and to enable interactive reading, _de novo_ creation, and writing of Sample Sheets.
-As of `v0.5.0` this library supports the entire Illumina specification for a sample sheet as defined in [this manual](https://www.illumina.com/content/dam/illumina-marketing/documents/products/technotes/sequencing-sheet-format-specifications-technical-note-970-2017-004.pdf).
+As of `v0.7.0` this library supports the entire Illumina specification for a sample sheet as defined in [this manual](https://www.illumina.com/content/dam/illumina-marketing/documents/products/technotes/sequencing-sheet-format-specifications-technical-note-970-2017-004.pdf).
 
 <h3 align="center">Installation</h3>
 
