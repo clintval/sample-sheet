@@ -864,7 +864,7 @@ class SampleSheet(object):
         """
         try:
             isatty = os.isatty(sys.stdout.fileno())
-        except OSError:
+        except OSError:  # pragma: no cover
             isatty = False
 
         return self._repr_tty_() if isatty else self.__repr__()

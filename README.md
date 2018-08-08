@@ -1,6 +1,6 @@
 <h1 align="center">sample-sheet</h2>
 
-<p align="center">A Python 3.6 library for handling Illumina sample sheets</p>
+<p align="center">A Python 3.6+ library for handling Illumina sample sheets</p>
 
 <p align="center">
   <a href="#installation"><strong>Installation</strong></a>
