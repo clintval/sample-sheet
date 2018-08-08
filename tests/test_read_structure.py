@@ -1,3 +1,5 @@
+import pytest
+
 from nose.tools import assert_false
 from nose.tools import assert_not_equal
 from nose.tools import assert_raises
@@ -101,6 +103,8 @@ class TestReadStructure(TestCase):
         """Test ``ReadStructure.__eq__()``"""
         structure = '10M141T8B8B10M141T'
         eq_(ReadStructure(structure), ReadStructure(structure))
+        with pytest.raises(NotImplementedError):
+            ReadStructure(structure) == 'random-string'
 
     def test_repr(self):
         """Test ``ReadStructure.__repr__()`` after initialization"""
