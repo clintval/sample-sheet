@@ -1,3 +1,5 @@
+import pytest
+
 from nose.tools import assert_is_instance
 from nose.tools import assert_is_none
 from nose.tools import assert_dict_equal
@@ -97,6 +99,8 @@ class TestSample(TestCase):
         fake2 = Sample({'Sample_ID': 1, 'Library_ID': '10x', 'Lane': '2'})
 
         assert_not_equal(fake1, fake2)
+        with pytest.raises(NotImplementedError):
+            fake1 == 'random-string'
 
     def test_str(self):
         """Test ``sample.__str__()``"""

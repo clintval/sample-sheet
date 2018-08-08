@@ -540,6 +540,12 @@ class TestSampleSheet(TestCase):
         with open(infile_pad, 'r', newline='\n', encoding='utf-8') as handle:
             self.assertMultiLineEqual(string_handle.read(), handle.read())
 
+    def test_read_with_additional_section(self):
+        """"Test ``SampleSheet.read()`` for reading with a Manifests section"""
+        infile = RESOURCES / 'paired-end-single-index-with-manifest.csv'
+        sample_sheet = SampleSheet(infile)
+        assert sample_sheet.Manifests.RNAPool == 'test'
+
     def test_write_custom_section(self):
         """Test ``write()`` when a custom section is defined"""
         # Create a ``SampleSheet`` with a [Manifests] section

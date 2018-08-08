@@ -1,6 +1,6 @@
 <h1 align="center">sample-sheet</h2>
 
-<p align="center">A Python 3.6 library for handling Illumina sample sheets</p>
+<p align="center">A Python 3.6+ library for handling Illumina sample sheets</p>
 
 <p align="center">
   <a href="#installation"><strong>Installation</strong></a>
@@ -13,9 +13,11 @@
 </p>
 
 <p align="center">
-  <a href="https://travis-ci.org/clintval/sample-sheet"><img src="https://travis-ci.org/clintval/sample-sheet.svg?branch=master"></img></a>
-  <a href="https://codecov.io/gh/clintval/sample-sheet"><img src="https://codecov.io/gh/clintval/sample-sheet/branch/master/graph/badge.svg"></img></a>
   <a href="https://badge.fury.io/py/sample_sheet"><img src="https://badge.fury.io/py/sample_sheet.svg" alt="PyPI version"></img></a>
+  <a href="https://travis-ci.org/clintval/sample-sheet"><img src="https://travis-ci.org/clintval/sample-sheet.svg?branch=master"></img></a>
+  <a href="https://sample-sheet.readthedocs.io/en/latest/?badge=latest"><img src="https://readthedocs.org/projects/sample-sheet/badge/?version=latest"</img></a>
+  <a href="https://codecov.io/gh/clintval/sample-sheet"><img src="https://codecov.io/gh/clintval/sample-sheet/branch/master/graph/badge.svg"></img></a>
+  <a href="http://mypy-lang.org/"><img src="http://www.mypy-lang.org/static/mypy_badge.svg"></img></a>
   <a href="https://codeclimate.com/github/clintval/sample-sheet/maintainability"><img src="https://api.codeclimate.com/v1/badges/80b4ce92cc622e857c79/maintainability"></img></a>
   <a href="https://github.com/clintval/sample-sheet/blob/master/LICENSE"><img src="https://img.shields.io/pypi/l/sample-sheet.svg"></img></a>
 </p>
@@ -174,10 +176,10 @@ A quick summary of the samples can be displayed in Markdown ASCII or HTML render
 
 <h3 align="center">Command Line Utility</h3>
 
-Along with an option for pretty-printing the sample sheet to terminal (`summary` tool), one can stream the sample sheet into JSON:
+Along with an option for pretty-printing the sample sheet to terminal (`sample_sheet totable`), one can stream the sample sheet into JSON:
 
 ```bash
-❯ sample-sheet to_json paired-end-single-index.csv | jq
+❯ sample-sheet tojson paired-end-single-index.csv | jq
 {
   "Header": {
     "IEM1FileVersion": "4",
@@ -214,30 +216,3 @@ Along with an option for pretty-printing the sample sheet to terminal (`summary`
   ]
 }
 ```
-
-<br>
-
-<h3 align="center">Contributing</h3>
-
-Pull requests, feature requests, and issues welcome!
-
-To make a development install:
-
-```bash
-❯ git clone git@github.com:clintval/sample-sheet.git
-❯ pip install -e 'sample-sheet[ci]'
-```
-
-To run the tests:
-
-```
-Name                            Stmts   Miss  Cover
----------------------------------------------------
-sample_sheet/__init__.py            1      0   100%
-sample_sheet/_sample_sheet.py     334      0   100%
----------------------------------------------------
-TOTAL                             335      0   100%
-
-OK!  65 tests, 0 failures, 0 errors in 0.1s
-```
-

@@ -11,29 +11,36 @@ from pathlib import Path
 from string import ascii_letters, digits, punctuation
 from textwrap import wrap
 
-from smart_open import smart_open
-from tabulate import tabulate
-from terminaltables import SingleTable
-from typing import List, Mapping, TextIO, Union
+from smart_open import smart_open  # type: ignore
+from tabulate import tabulate   # type: ignore
+from terminaltables import SingleTable   # type: ignore
+from typing import Any, List, Mapping, Optional, Set, TextIO, Union
 
-__all__ = [
+from ._util import maybe_render_markdown
+
+__all__: List[str] = [
     'ReadStructure',
     'Sample',
     'SampleSheet']
 
-DESIGN_HEADER = ['Sample_ID', 'Sample_Name', 'Library_ID', 'Description']
-RECOMMENDED_KEYS = ['Sample_ID', 'Sample_Name', 'index']
-REQUIRED_SECTIONS = ['Header', 'Settings', 'Reads', 'Data']
+DESIGN_HEADER: List[str] = [
+    'Sample_ID',
+    'Sample_Name',
+    'Library_ID',
+    'Description'
+]
+RECOMMENDED_KEYS: List[str] = ['Sample_ID', 'Sample_Name', 'index']
+REQUIRED_SECTIONS: List[str] = ['Header', 'Settings', 'Reads', 'Data']
 
 # The minimum column with of a detected TTY for wrapping text in CLI columns.
-MIN_WIDTH = 10
+MIN_WIDTH: int = 10
 
 # From the section "Character Encoding" in the Illumina format specification.
 #
 # https://www.illumina.com/content/dam/illumina-marketing/
 #     documents/products/technotes/
 #     sequencing-sheet-format-specifications-technical-note-970-2017-004.pdf
-VALID_ASCII = set(ascii_letters + digits + punctuation + ' \n\r')
+VALID_ASCII: Set[str] = set(ascii_letters + digits + punctuation + ' \n\r')
 
 
 class ReadStructure(object):
@@ -47,33 +54,32 @@ class ReadStructure(object):
         - B: sample index
         - M: unique molecular identifer
 
-    Parameters
-    ----------
-    structure : str
-        String representation of a read structure.
+    Args:
+        structure: String representation of a read structure.
 
-    Examples
-    --------
-    >>> rs = ReadStructure("10M141T8B")
-    >>> rs.is_paired_end
-    False
-    >>> rs.has_umi
-    True
-    >>> rs.tokens
-    ['10M', '141T', '8B']
+    Examples:
+        >>> rs = ReadStructure("10M141T8B")
+        >>> rs.is_paired_end
+        False
+        >>> rs.has_umi
+        True
+        >>> rs.tokens
+        ['10M', '141T', '8B']
 
-    Notes
-    -----
-    This class does not currently support read structures where the last token
-    has ambiguous length by using the <+> operator preceding the <type>.
+    Notes:
 
-    Definitions of read structure types can be found at the following location:
+        This class does not currently support read structures where the last
+        token has ambiguous length by using the <+> operator preceding the
+        <type>.
 
-        https://github.com/nh13/read-structure-examples
+        Definitions of read structure types can be found at the following
+        location:
 
-    Discussion on the topic in hts-specs:
+            https://github.com/nh13/read-structure-examples
 
-        https://github.com/samtools/hts-specs/issues/270
+        Discussion on the topic in hts-specs:
+
+            https://github.com/samtools/hts-specs/issues/270
 
     """
     _token_pattern = re.compile(r'(\d+[BMST])')
@@ -86,7 +92,7 @@ class ReadStructure(object):
     _skip_pattern = re.compile(r'(\d+S)')
     _template_pattern = re.compile(r'(\d+T)')
 
-    def __init__(self, structure: str):
+    def __init__(self, structure: str) -> None:
         if not bool(self._valid_pattern.match(structure)):
             raise ValueError(f'Not a valid read structure: "{structure}"')
         self.structure = structure
@@ -165,20 +171,22 @@ class ReadStructure(object):
         """Return a list of all tokens in the read structure."""
         return self._token_pattern.findall(self.structure)
 
-    def copy(self):
+    def copy(self) -> 'ReadStructure':
         """Returns a deep copy of this read structure."""
         return ReadStructure(self.structure)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         """Read structures are equal if their string repr are equal."""
+        if not isinstance(other, ReadStructure):
+            raise NotImplementedError
         return self.structure == other.structure
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
-            f'{self.__class__.__name__}('
+            f'{self.__class__.__qualname__}('
             f'structure="{self.structure}")')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.structure
 
 
@@ -192,25 +200,24 @@ class Sample(object):
     the key "Read_Structure" is provided then its value is promoted to class
     ``ReadStructure`` and additional functionality is enabled.
 
-    Parameters
-    ----------
-    mappable : dict, optional
-        The key-value pairs describing this sample.
+    Args:
+        mappable: The key-value pairs describing this sample.
 
-    Examples
-    --------
-    >>> sample = Sample({"Sample_ID": "87", "Sample_Name": "3T", "index": "A"})
-    >>> sample
-    Sample({"Sample_ID": "87", "Sample_Name": "3T", "index": "A"})
-    >>> sample = Sample({'Read_Structure': '151T'})
-    >>> sample.Read_Structure
-    ReadStructure(structure="151T")
+    Examples:
+        >>> mapping = {"Sample_ID": "87", "Sample_Name": "3T", "index": "A"}
+        >>> sample = Sample(mapping)
+        >>> sample
+        Sample({"Sample_ID": "87", "Sample_Name": "3T", "index": "A"})
+        >>> sample = Sample({'Read_Structure': '151T'})
+        >>> sample.Read_Structure
+        ReadStructure(structure="151T")
 
     """
 
-    def __init__(self, mappable: Union[None, Mapping]=None):
+    def __init__(self, mappable: Optional[Mapping]=None) -> None:
         mappable = dict() if mappable is None else mappable
-        self._other_keys = set()
+        self.sample_sheet: Optional[SampleSheet] = None
+        self._other_keys: Set[str] = set()
 
         self._whitespace_re = re.compile(r'\s+')
         self._valid_index_key_pattern = re.compile(r'index2?')
@@ -256,11 +263,11 @@ class Sample(object):
                 f'sample `index` and sample `index2` must be defined '
                 f'also: {self}')
 
-    def keys(self):
+    def keys(self) -> Set[str]:
         """Return all public attributes."""
         return set(RECOMMENDED_KEYS).union(self._other_keys)
 
-    def to_dict(self):
+    def to_dict(self) -> Mapping[str, str]:
         """Return the key value pairs associated with this ``Sample``"""
         return {key: str(getattr(self, key)) for key in self.keys()}
 
@@ -268,43 +275,46 @@ class Sample(object):
         """Return ``None`` if an attribute is undefined."""
         return self.__dict__.get(attr)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         """Samples are equal if ``Sample_ID``, ``Library_ID``, and ``Lane are
         equal.
 
         """
+        if not isinstance(other, Sample):
+            raise NotImplementedError
         return (
             self.Sample_ID == other.Sample_ID and
             self.Library_ID == other.Library_ID and
             self.Lane == other.Lane)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Shows a simplified constructor command to initialize this object."""
         args = {key: getattr(self, key) for key in RECOMMENDED_KEYS}
-        args = args.__repr__().replace('\'', '"')
-        return f'{self.__class__.__name__}({args})'
+        args_str = args.__repr__().replace('\'', '"')
+        return f'{self.__class__.__qualname__}({args_str})'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.Sample_ID)
 
 
 class SampleSheetSection(object):
-    def __init__(self):
+    def __init__(self) -> None:
         self.__dict__['keys'] = []
         self.__dict__['_key_map'] = {}
 
-    def add_attr(self, attr, value, name=None):
+    def add_attr(
+        self,
+        attr: str,
+        value: Any,
+        name: Optional[str]=None
+    ) -> None:
         """Add an attribute to this class and optionally save an alternate key.
 
-        Parameters
-        ----------
-        attr : str
-            Any valid Python attribute name.
-        value : any
-            The attribute's value.
-        name : str, optional
-            An optional key with no restriction on formatting to be used as the
-            key any written ``SampleSheet``.
+        Args:
+            attr : Any valid Python attribute name.
+            value: The attributes value.
+            name: An optional key with no restriction on formatting to be used
+                as the key any written ``SampleSheet``.
 
         """
         if re.search(r'\s+', attr):
@@ -312,26 +322,28 @@ class SampleSheetSection(object):
         setattr(self, attr, value)
         self._key_map[attr] = name or attr
 
-    def to_dict(self) -> Mapping:
+    def to_dict(self) -> Mapping[str, Any]:
         """Return the key values pairs attached to this section."""
         return {self._key_map[attr]: getattr(self, attr) for attr in self.keys}
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr) -> Any:
         """Return ``None`` If an attribute does not exist."""
         return self.__dict__.get(attr)
 
-    def __setattr__(self, attr, value):
+    def __setattr__(self, attr: str, value: str) -> None:
         """Save the keys to this object in the order they were assigned."""
         self.keys.append(attr)
         self._key_map[attr] = attr
         self.__dict__[attr] = value
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         """Sections are equivalent if their dictionaries are equivalent."""
+        if not isinstance(other, SampleSheetSection):
+            raise NotImplementedError
         return self.__dict__ == other.__dict__
 
-    def __repr__(self):
-        return f'{self.__class__.__name__}'
+    def __repr__(self) -> str:
+        return f'{self.__class__.__qualname__}'
 
 
 class SampleSheet(object):
@@ -348,35 +360,34 @@ class SampleSheet(object):
         [Reads]    : .ini convention as a vertical array of items
         [Data]     : table with header
 
-    Parameters
-    ----------
-    path : str or pathlib.Path, optional
+    Args:
+        path : str or pathlib.Path, optional
         Any path supported by ``pathlib.Path`` and ``smart_open``.
 
     """
-    _encoding = 'utf8'
+    _encoding: str = 'utf8'
     _section_header_re = re.compile(r'\[(.*)\]')
     _whitespace_re = re.compile(r'\s+')
 
-    def __init__(self, path: Union[None, str, Path]=None):
+    def __init__(self, path: Optional[Path]=None) -> None:
         self.path = path
 
-        self._samples = []
-        self._sections = []
+        self._samples: List[Sample] = []
+        self._sections: List[str] = []
 
-        self.Reads = []
-        self.Read_Structure = None
-        self.samples_have_index = None
-        self.samples_have_index2 = None
+        self.Reads: List[int] = []
+        self.Read_Structure: Optional[ReadStructure] = None
+        self.samples_have_index: Optional[bool] = None
+        self.samples_have_index2: Optional[bool] = None
 
-        self.Header = SampleSheetSection()
-        self.Settings = SampleSheetSection()
+        self.Header: SampleSheetSection = SampleSheetSection()
+        self.Settings: SampleSheetSection = SampleSheetSection()
 
         if self.path:
             self._parse(str(self.path))
 
     @staticmethod
-    def _make_csv_reader(path: Union[str, Path]) -> csv.reader:
+    def _readlines(path: Union[str, Path]) -> List[List[str]]:
         """Return a ``csv.reader`` for a filepath.
 
         This helper method is required since ``smart_open.smart_open`` cannot
@@ -384,36 +395,31 @@ class SampleSheet(object):
         is opened, read, decoded, and then wrapped in a new handle for
         ``csv.reader``.
 
-        Parameters
-        ----------
-        path : str or pathlib.Path
-            Any path supported by ``pathlib.Path`` and ``smart_open``.
+        Args:
+            path: Any path supported by ``pathlib.Path`` and ``smart_open``.
 
-        Returns
-        -------
-        reader : csv.reader
-            A configured ``csv.reader`` for iterating through the sample sheet.
+        Returns:
+            lines: All lines of the sample sheet.
 
-        Notes
-        -----
-        A workaround will exist as long as this issue remains unsolved:
+        Notes:
+            A work  around will exist as long as this issue remains unsolved:
 
-            https://github.com/RaRe-Technologies/smart_open/issues/146
+                https://github.com/RaRe-Technologies/smart_open/issues/146
 
         """
         string = smart_open(str(path)).read().decode(SampleSheet._encoding)
         handle = io.StringIO(string, newline='')
-        reader = csv.reader(handle, skipinitialspace=True)
-        return reader
+        lines = list(csv.reader(handle, skipinitialspace=True))
+        return lines
 
-    def add_section(self, section_name):
+    def add_section(self, section_name: str) -> None:
         """Add a section to the ``SampleSheet``."""
         section_name = self._whitespace_re.sub('_', section_name)
         self._sections.append(section_name)
         setattr(self, section_name, SampleSheetSection())
 
     @property
-    def all_sample_keys(self) -> set:
+    def all_sample_keys(self) -> Set[str]:
         """Return the unique keys of all samples in this ``SampleSheet``."""
         return set(chain.from_iterable([sample.keys() for sample in self]))
 
@@ -425,10 +431,9 @@ class SampleSheet(object):
         within an IPython interpreter. If we are not running in an IPython
         interpreter, then print out a nicely formatted ASCII table.
 
-        Returns
-        -------
-        markdown : str, IPython.core.display.Markdown
-            A visual table of IDs and names for all samples in Markdown.
+        Returns:
+            markdown: A visual table of IDs and names for all samples in
+                Markdown.
 
         """
         if not self.samples:
@@ -439,32 +444,28 @@ class SampleSheet(object):
             headers=DESIGN_HEADER,
             tablefmt='pipe')
 
-        if is_ipython_interpreter():  # pragma:  no cover
-            from IPython.display import Markdown
-            return Markdown(markdown)
-        else:
-            return markdown
+        return maybe_render_markdown(markdown)
 
     @property
-    def is_paired_end(self) -> Union[None, bool]:
+    def is_paired_end(self) -> Optional[bool]:
         """Return if the samples are paired-end."""
         return None if not self.Reads else len(self.Reads) == 2
 
     @property
-    def is_single_end(self) -> Union[None, bool]:
+    def is_single_end(self) -> Optional[bool]:
         """Return if the samples are single-end."""
         return None if not self.Reads else len(self.Reads) == 1
 
     @property
-    def samples(self):
+    def samples(self) -> List:
         """Return the samples present in this ``SampleSheet``."""
         return self._samples
 
     def _parse(self, path: Union[str, Path]):
-        section_name = None
-        sample_header = None
+        section_name: str = ''
+        sample_header: Optional[List[str]] = None
 
-        for i, line in enumerate(self._make_csv_reader(path)):
+        for i, line in enumerate(self._readlines(path)):
             # Skip to next line if this line is empty to support formats of
             # sample sheets with multiple newlines as section seperators.
             #
@@ -511,7 +512,8 @@ class SampleSheet(object):
             # [<Other>] - keys in first column and values in second column.
             else:
                 original_key, value, *_ = line
-                getattr(self, section_name).add_attr(
+                section: SampleSheetSection = getattr(self, section_name)
+                section.add_attr(
                     attr=self._whitespace_re.sub('_', original_key),
                     value=value,
                     name=original_key)
@@ -538,10 +540,8 @@ class SampleSheet(object):
             - All samples have the same index design (index, index2) per
                   flowcell or per lane if lanes have been defined.
 
-        Parameters
-        ----------
-        sample : Sample
-            ``Sample`` to add to this sample sheet.
+        Args:
+            sample: ``Sample`` to add to this sample sheet.
 
         """
         # Set whether the samples will have ``index`` or ``index2``.
@@ -639,10 +639,8 @@ class SampleSheet(object):
     def to_json(self, **kwargs) -> str:
         """Write this ``SampleSheet`` to JSON.
 
-        Return
-        ------
-        content : str
-            The JSON dump of all entries in this sample sheet.
+        Returns:
+            content: The JSON dump of all entries in this sample sheet.
 
         """
         content = {
@@ -689,14 +687,10 @@ class SampleSheet(object):
         Two files will be written to `directory` for all `lanes` specified. If
         the path to `directory` does not exist, it will be created.
 
-        Parameters
-        ----------
-        directory : str or pathlib.Path
-            File path to the directory to write the parameter files.
-        bam_prefix: str or pathlib.Path
-            Where the demultiplexed BAMs should be written.
-        lanes : int, or iterable of int
-            The lanes to write basecalling parameters for.
+        Args:
+            directory: File path to the directory to write the parameter files.
+            bam_prefix: Where the demultiplexed BAMs should be written.
+            lanes: The lanes to write basecalling parameters for.
 
         """
         if len(self.samples) == 0:
@@ -808,12 +802,9 @@ class SampleSheet(object):
     def write(self, handle: TextIO, blank_lines: int=1):
         """Write this ``SampleSheet`` to a file-like object.
 
-        Parameters
-        ----------
-        handle : file-like object
-            Object to wrap by csv.writer.
-        blank_lines : int
-            Number of blank lines to write between sections.
+        Args:
+            handle: Object to wrap by csv.writer.
+            blank_lines: Number of blank lines to write between sections.
 
         """
         writer = csv.writer(handle)
@@ -861,7 +852,7 @@ class SampleSheet(object):
     def __repr__(self):
         """Show the constructor command to initialize this object."""
         path = f'"{self.path}"' if self.path else 'None'
-        return f'{self.__class__.__name__}({path})'
+        return f'{self.__class__.__qualname__}({path})'
 
     def __str__(self):
         """Prints a summary representation of this ``SampleSheet``.
@@ -873,7 +864,7 @@ class SampleSheet(object):
         """
         try:
             isatty = os.isatty(sys.stdout.fileno())
-        except OSError:
+        except OSError:  # pragma: no cover
             isatty = False
 
         return self._repr_tty_() if isatty else self.__repr__()
@@ -931,9 +922,3 @@ class SampleSheet(object):
             sample_desc.table])
 
         return table
-
-
-def is_ipython_interpreter() -> bool:  # pragma:  no cover
-    """Return if we are in an IPython interpreter or not."""
-    import __main__ as main
-    return hasattr(main, '__IPYTHON__')

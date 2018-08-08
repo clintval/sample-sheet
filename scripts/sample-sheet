@@ -11,15 +11,15 @@ def cli():
 
 @cli.command()
 @click.argument('path')
-def summary(path):
-    """Pretty print a sample sheet"""
+def totable(path):
+    """Pretty print a sample sheet to terminal"""
     print(SampleSheet(path))
 
 
 @cli.command()
 @click.argument('path')
-def to_json(path):
-    """Stream this sample sheet into JSON"""
+def tojson(path):
+    """Convert a sample sheet to JSON"""
     print(SampleSheet(path).to_json())
 
 

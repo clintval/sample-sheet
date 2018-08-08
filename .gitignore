@@ -1,6 +1,3 @@
-# Nose progressive
-.noseids
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -48,6 +45,7 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
+.pytest*
 
 # Translations
 *.mo

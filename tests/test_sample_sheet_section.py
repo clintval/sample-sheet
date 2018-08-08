@@ -1,3 +1,5 @@
+import pytest
+
 from nose.tools import assert_is_none
 from nose.tools import assert_dict_equal
 from nose.tools import assert_raises
@@ -58,6 +60,8 @@ class TestSampleSheetSection(TestCase):
         section1.test_key = 200
         section2.test_key = 200
         eq_(section1, section2)
+        with pytest.raises(NotImplementedError):
+            section1 == 'random-string'
 
     def test_repr(self):
         """Test ``SampleSheetSection.__repr__()``"""
