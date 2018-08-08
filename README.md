@@ -17,7 +17,7 @@
   <a href="https://travis-ci.org/clintval/sample-sheet"><img src="https://travis-ci.org/clintval/sample-sheet.svg?branch=master"></img></a>
   <a href="https://sample-sheet.readthedocs.io/en/latest/?badge=latest"><img src="https://readthedocs.org/projects/sample-sheet/badge/?version=latest"</img></a>
   <a href="https://codecov.io/gh/clintval/sample-sheet"><img src="https://codecov.io/gh/clintval/sample-sheet/branch/master/graph/badge.svg"></img></a>
-  <a href="https://mypy-lang.org/"><img src="https://www.mypy-lang.org/static/mypy_badge.svg"></img></a>
+  <a href="http://mypy-lang.org/"><img src="http://www.mypy-lang.org/static/mypy_badge.svg"></img></a>
   <a href="https://codeclimate.com/github/clintval/sample-sheet/maintainability"><img src="https://api.codeclimate.com/v1/badges/80b4ce92cc622e857c79/maintainability"></img></a>
   <a href="https://github.com/clintval/sample-sheet/blob/master/LICENSE"><img src="https://img.shields.io/pypi/l/sample-sheet.svg"></img></a>
 </p>
