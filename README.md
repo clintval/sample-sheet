@@ -1,7 +1,6 @@
 # sample-sheet
 
-### Python 3.6+ library for handling Illumina sample sheets
-
+### Python 3.6+ package for handling Illumina Sample Sheets
 
 [![PyPi Release](https://badge.fury.io/py/sample_sheet.svg)](https://badge.fury.io/py/sample_sheet)
 [![Testing Status](https://travis-ci.org/clintval/sample-sheet.svg?branch=master)](https://travis-ci.org/clintval/sample-sheet)
@@ -11,7 +10,13 @@
 [![MyPy Checked](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 [![License](https://img.shields.io/pypi/l/sample-sheet.svg)](https://github.com/clintval/sample-sheet/blob/master/LICENSE)
 
-This open source library replaces Illumina's proprietary [Experiment Manager](https://support.illumina.com/sequencing/sequencing_software/experiment_manager.html) and enables interactive reading, _de novo_ creation, and writing of Sample Sheets.
+An open source library to completely replace [Illumina's Experiment Manager](https://support.illumina.com/sequencing/sequencing_software/experiment_manager.html).
+
+Features:
+
+- Roundtrip reading, editing, and writing of Sample Sheets
+- _de novo_ creation creation of Sample Sheets
+- Exporting Sample Sheets to JSON
 
 ```
 ❯ pip install sample_sheet
