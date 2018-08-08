@@ -1,5 +1,4 @@
 import csv
-import io
 import json
 import os
 import re
@@ -14,7 +13,7 @@ from textwrap import wrap
 from smart_open import smart_open  # type: ignore
 from tabulate import tabulate   # type: ignore
 from terminaltables import SingleTable   # type: ignore
-from typing import Any, List, Mapping, Optional, Set, TextIO, Union
+from typing import Any, Generator, List, Mapping, Optional, Set, TextIO, Union
 
 from ._util import maybe_render_markdown
 
@@ -385,7 +384,7 @@ class SampleSheet(object):
         self.Settings: SampleSheetSection = SampleSheetSection()
 
         if self.path:
-            self._parse(str(self.path))
+            self._parse(self.path)
 
     def add_section(self, section_name: str) -> None:
         """Add a section to the ``SampleSheet``."""
@@ -436,7 +435,7 @@ class SampleSheet(object):
         """Return the samples present in this ``SampleSheet``."""
         return self._samples
 
-    def _parse(self, path: Union[str, Path]):
+    def _parse(self, path: Path):
         section_name: str = ''
         sample_header: Optional[List[str]] = None
 
@@ -633,8 +632,8 @@ class SampleSheet(object):
 
     def to_picard_basecalling_params(
         self,
-        directory: Union[str, Path],
-        bam_prefix: Union[str, Path],
+        directory: Path,
+        bam_prefix: Path,
         lanes: Union[int, List[int]]
     ):
         """Writes sample and library information to a set of files for a given
@@ -819,15 +818,15 @@ class SampleSheet(object):
             line = [getattr(sample, key) for key in samples_header]
             writer.writerow(pad_iterable(line, csv_width))
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the number of samples on this ``SampleSheet``."""
         return len(self.samples)
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Sample, None, None]:
         """Iterating over a ``SampleSheet`` will emit its samples."""
         yield from self.samples
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Show the constructor command to initialize this object."""
         path = f'"{self.path}"' if self.path else 'None'
         return f'{self.__class__.__qualname__}({path})'
