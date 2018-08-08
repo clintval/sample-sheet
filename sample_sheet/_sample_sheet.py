@@ -29,6 +29,8 @@ DESIGN_HEADER: List[str] = [
     'Library_ID',
     'Description'
 ]
+
+REQUIRED_KEYS: List[str] = ['Sample_ID']
 RECOMMENDED_KEYS: List[str] = ['Sample_ID', 'Sample_Name', 'index']
 REQUIRED_SECTIONS: List[str] = ['Header', 'Settings', 'Reads', 'Data']
 
@@ -214,14 +216,14 @@ class Sample(object):
 
     """
 
+    _valid_index_key_pattern = re.compile(r'index2?')
+    _valid_index_value_pattern = re.compile(r'^[ACGTN]*$')
+    _whitespace_re = re.compile(r'\s+')
+
     def __init__(self, mappable: Optional[Mapping]=None) -> None:
         mappable = dict() if mappable is None else mappable
         self.sample_sheet: Optional[SampleSheet] = None
         self._other_keys: Set[str] = set()
-
-        self._whitespace_re = re.compile(r'\s+')
-        self._valid_index_key_pattern = re.compile(r'index2?')
-        self._valid_index_value_pattern = re.compile(r'^[ACGTN]*$')
 
         # Explicitly define the recommended keys as None.
         for key in RECOMMENDED_KEYS:
@@ -361,8 +363,7 @@ class SampleSheet(object):
         [Data]     : table with header
 
     Args:
-        path : str or pathlib.Path, optional
-        Any path supported by ``pathlib.Path`` and ``smart_open``.
+        path:  Any path supported by ``pathlib.Path`` and/or ``smart_open``.
 
     """
     _encoding: str = 'utf8'
@@ -385,32 +386,6 @@ class SampleSheet(object):
 
         if self.path:
             self._parse(str(self.path))
-
-    @staticmethod
-    def _readlines(path: Union[str, Path]) -> List[List[str]]:
-        """Return a ``csv.reader`` for a filepath.
-
-        This helper method is required since ``smart_open.smart_open`` cannot
-        decode to "utf8" on-the-fly specifically for HTTPS. Instead, the path
-        is opened, read, decoded, and then wrapped in a new handle for
-        ``csv.reader``.
-
-        Args:
-            path: Any path supported by ``pathlib.Path`` and ``smart_open``.
-
-        Returns:
-            lines: All lines of the sample sheet.
-
-        Notes:
-            A work  around will exist as long as this issue remains unsolved:
-
-                https://github.com/RaRe-Technologies/smart_open/issues/146
-
-        """
-        string = smart_open(str(path)).read().decode(SampleSheet._encoding)
-        handle = io.StringIO(string, newline='')
-        lines = list(csv.reader(handle, skipinitialspace=True))
-        return lines
 
     def add_section(self, section_name: str) -> None:
         """Add a section to the ``SampleSheet``."""
@@ -465,7 +440,10 @@ class SampleSheet(object):
         section_name: str = ''
         sample_header: Optional[List[str]] = None
 
-        for i, line in enumerate(self._readlines(path)):
+        with smart_open(path, encoding=self._encoding) as handle:
+            lines = list(csv.reader(handle, skipinitialspace=True))
+
+        for i, line in enumerate(lines):
             # Skip to next line if this line is empty to support formats of
             # sample sheets with multiple newlines as section seperators.
             #
