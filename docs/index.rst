@@ -5,4 +5,5 @@ Welcome to sample-sheet documentation!
    :maxdepth: 2
    :caption: Main Documentation
 
+   Tutorial
    CONTRIBUTING
