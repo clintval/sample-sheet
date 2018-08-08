@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    = --color
 SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = snv-spectrum
+SPHINXPROJ    = sample-sheet
 SOURCEDIR     = '.'
 BUILDDIR      = _build
 
