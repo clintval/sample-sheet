@@ -1,3 +1,3 @@
 import setuptools
 
-setuptools.setup(name='snv_spectrum', version='0.8.0')
+setuptools.setup(name='sample-sheet', version='0.8.0')
