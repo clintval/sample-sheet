@@ -314,16 +314,11 @@ class SampleSheetSection(CaseInsensitiveDict):
     def __init__(
         self, data: Optional[Mapping] = None, **kwargs: Mapping
     ) -> None:
+        self._store: Mapping
         super().__init__(data=data, **kwargs)
 
     def __getattr__(self, attr: Any) -> Optional[Any]:
         return super().get(attr)
-
-    def keys(self) -> List[Any]:
-        return [casedkey for casedkey, mappedvalue in self._store.values()]
-
-    def values(self) -> List[Any]:
-        return [mappedvalue for casedkey, mappedvalue in self._store.values()]
 
 
 class SampleSheet(object):
@@ -447,7 +442,10 @@ class SampleSheet(object):
             # If we enter a section save it's name and continue to next line.
             if header_match:
                 section_name, *_ = header_match.groups()
-                if not hasattr(self, section_name) and section_name != 'Data':
+                if (
+                    section_name not in self._sections
+                    and section_name not in REQUIRED_SECTIONS
+                ):
                     self.add_section(section_name)
                 continue
 
