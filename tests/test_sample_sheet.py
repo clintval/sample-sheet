@@ -17,6 +17,11 @@ from sample_sheet import *  # Test import of __all__
 
 RESOURCES = (Path(__file__).absolute().resolve().parent / 'resources')
 
+URI = (
+    'https://raw.githubusercontent.com/clintval/sample-sheet/'
+    'master/tests/resources/paired-end-single-index.csv'
+)
+
 VT_100_MAPPING = {
     '0x71': '─',
     '0x74': '├',
@@ -618,6 +623,11 @@ class TestSampleSheet(TestCase):
         eq_(len(sample_sheet), 1)
         sample_sheet.add_sample(fake2)
         eq_(len(sample_sheet), 2)
+
+    def test_read_from_uri(self):
+        """Test ``__init__()`` from URI"""
+        sample_sheet = SampleSheet(URI)
+        assert sample_sheet.Reads == [151, 151]
 
     def test_str(self):
         """Test ``__str__()``, when not printing to a TTY"""

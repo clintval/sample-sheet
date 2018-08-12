@@ -1,5 +1,4 @@
 import csv
-import io
 import json
 import os
 import re
@@ -14,7 +13,7 @@ from textwrap import wrap
 from smart_open import smart_open  # type: ignore
 from tabulate import tabulate   # type: ignore
 from terminaltables import SingleTable   # type: ignore
-from typing import Any, List, Mapping, Optional, Set, TextIO, Union
+from typing import Any, Generator, List, Mapping, Optional, Set, TextIO, Union
 
 from ._util import maybe_render_markdown
 
@@ -29,6 +28,8 @@ DESIGN_HEADER: List[str] = [
     'Library_ID',
     'Description'
 ]
+
+REQUIRED_KEYS: List[str] = ['Sample_ID']
 RECOMMENDED_KEYS: List[str] = ['Sample_ID', 'Sample_Name', 'index']
 REQUIRED_SECTIONS: List[str] = ['Header', 'Settings', 'Reads', 'Data']
 
@@ -214,14 +215,14 @@ class Sample(object):
 
     """
 
+    _valid_index_key_pattern = re.compile(r'index2?')
+    _valid_index_value_pattern = re.compile(r'^[ACGTN]*$')
+    _whitespace_re = re.compile(r'\s+')
+
     def __init__(self, mappable: Optional[Mapping]=None) -> None:
         mappable = dict() if mappable is None else mappable
         self.sample_sheet: Optional[SampleSheet] = None
         self._other_keys: Set[str] = set()
-
-        self._whitespace_re = re.compile(r'\s+')
-        self._valid_index_key_pattern = re.compile(r'index2?')
-        self._valid_index_value_pattern = re.compile(r'^[ACGTN]*$')
 
         # Explicitly define the recommended keys as None.
         for key in RECOMMENDED_KEYS:
@@ -361,8 +362,7 @@ class SampleSheet(object):
         [Data]     : table with header
 
     Args:
-        path : str or pathlib.Path, optional
-        Any path supported by ``pathlib.Path`` and ``smart_open``.
+        path:  Any path supported by ``pathlib.Path`` and/or ``smart_open``.
 
     """
     _encoding: str = 'utf8'
@@ -384,33 +384,7 @@ class SampleSheet(object):
         self.Settings: SampleSheetSection = SampleSheetSection()
 
         if self.path:
-            self._parse(str(self.path))
-
-    @staticmethod
-    def _readlines(path: Union[str, Path]) -> List[List[str]]:
-        """Return a ``csv.reader`` for a filepath.
-
-        This helper method is required since ``smart_open.smart_open`` cannot
-        decode to "utf8" on-the-fly specifically for HTTPS. Instead, the path
-        is opened, read, decoded, and then wrapped in a new handle for
-        ``csv.reader``.
-
-        Args:
-            path: Any path supported by ``pathlib.Path`` and ``smart_open``.
-
-        Returns:
-            lines: All lines of the sample sheet.
-
-        Notes:
-            A work  around will exist as long as this issue remains unsolved:
-
-                https://github.com/RaRe-Technologies/smart_open/issues/146
-
-        """
-        string = smart_open(str(path)).read().decode(SampleSheet._encoding)
-        handle = io.StringIO(string, newline='')
-        lines = list(csv.reader(handle, skipinitialspace=True))
-        return lines
+            self._parse(self.path)
 
     def add_section(self, section_name: str) -> None:
         """Add a section to the ``SampleSheet``."""
@@ -461,11 +435,14 @@ class SampleSheet(object):
         """Return the samples present in this ``SampleSheet``."""
         return self._samples
 
-    def _parse(self, path: Union[str, Path]):
+    def _parse(self, path: Path):
         section_name: str = ''
         sample_header: Optional[List[str]] = None
 
-        for i, line in enumerate(self._readlines(path)):
+        with smart_open(path, encoding=self._encoding) as handle:
+            lines = list(csv.reader(handle, skipinitialspace=True))
+
+        for i, line in enumerate(lines):
             # Skip to next line if this line is empty to support formats of
             # sample sheets with multiple newlines as section seperators.
             #
@@ -655,8 +632,8 @@ class SampleSheet(object):
 
     def to_picard_basecalling_params(
         self,
-        directory: Union[str, Path],
-        bam_prefix: Union[str, Path],
+        directory: Path,
+        bam_prefix: Path,
         lanes: Union[int, List[int]]
     ):
         """Writes sample and library information to a set of files for a given
@@ -841,15 +818,15 @@ class SampleSheet(object):
             line = [getattr(sample, key) for key in samples_header]
             writer.writerow(pad_iterable(line, csv_width))
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the number of samples on this ``SampleSheet``."""
         return len(self.samples)
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Sample, None, None]:
         """Iterating over a ``SampleSheet`` will emit its samples."""
         yield from self.samples
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Show the constructor command to initialize this object."""
         path = f'"{self.path}"' if self.path else 'None'
         return f'{self.__class__.__qualname__}({path})'
