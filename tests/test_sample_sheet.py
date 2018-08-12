@@ -15,7 +15,12 @@ from unittest import TestCase
 
 from sample_sheet import *  # Test import of __all__
 
-RESOURCES = (Path(__file__).absolute().resolve().parent / 'resources')
+RESOURCES = Path(__file__).absolute().resolve().parent / 'resources'
+
+URI = (
+    'https://raw.githubusercontent.com/clintval/sample-sheet/'
+    'master/tests/resources/paired-end-single-index.csv'
+)
 
 URI = (
     'https://raw.githubusercontent.com/clintval/sample-sheet/'
@@ -39,7 +44,9 @@ VT_100_MAPPING = {
 
 def decode_vt_100(iterable, default_set='(B', alt_set='(0', escape='\x1b'):
     """Decodes a sequence of VT100 characters.
-    https://stackoverflow.com/a/48046132/3727678
+
+    Notes:
+        https://stackoverflow.com/a/48046132/3727678
 
     """
     for is_escape, group in groupby(iterable, lambda _: _ == escape):
@@ -49,10 +56,10 @@ def decode_vt_100(iterable, default_set='(B', alt_set='(0', escape='\x1b'):
         characters = ''.join(group)
 
         if characters.startswith(default_set):
-            yield characters[len(default_set):]
+            yield characters[len(default_set) :]
 
         elif characters.startswith(alt_set):
-            for character in characters[len(alt_set):]:
+            for character in characters[len(alt_set) :]:
                 yield VT_100_MAPPING[hex(ord(character))]
 
 
@@ -274,8 +281,10 @@ class TestSampleSheet(TestCase):
         sample_sheet.add_sample(sample1)
         sample_sheet.add_sample(sample2)
 
-        eq_(sample_sheet.all_sample_keys,
-            {'Sample_ID', 'Sample_Name', 'index', 'Key1', 'Key2'})
+        eq_(
+            sample_sheet.all_sample_keys,
+            {'Sample_ID', 'Sample_Name', 'index', 'Key1', 'Key2'},
+        )
 
     def test_parse_invalid_ascii(self):
         """Test exception with invalid characters"""
@@ -288,7 +297,8 @@ class TestSampleSheet(TestCase):
             ',\n'
             '[Data],\n'
             'Sample_ID, Description\n'
-            'test2, bad 😃 description\n')
+            'test2, bad 😃 description\n'
+        )
 
         assert_raises(ValueError, SampleSheet, filename)
 
@@ -303,7 +313,8 @@ class TestSampleSheet(TestCase):
             ',,\n'
             '[Data],,\n'
             'Sample_ID, Description,\n'
-            'test2, Sample Description, New Field\n')
+            'test2, Sample Description, New Field\n'
+        )
 
         assert_raises(ValueError, SampleSheet, filename)
 
@@ -312,19 +323,23 @@ class TestSampleSheet(TestCase):
         sample_sheet = SampleSheet()
         assert_raises(ValueError, lambda: sample_sheet.experimental_design)
 
-        sample1 = Sample({
-            'Sample_ID': 493,
-            'Sample_Name': '10x-FA',
-            'index': 'ACGGTNT',
-            'Library_ID': 'exp001',
-            'Description': 'A sentence!'}
+        sample1 = Sample(
+            {
+                'Sample_ID': 493,
+                'Sample_Name': '10x-FA',
+                'index': 'ACGGTNT',
+                'Library_ID': 'exp001',
+                'Description': 'A sentence!',
+            }
         )
-        sample2 = Sample({
-            'Sample_ID': 207,
-            'Sample_Name': '10x-FB',
-            'index': 'TTGGTCT',
-            'Library_ID': 'exp001',
-            'Description': 'One more!'}
+        sample2 = Sample(
+            {
+                'Sample_ID': 207,
+                'Sample_Name': '10x-FB',
+                'index': 'TTGGTCT',
+                'Library_ID': 'exp001',
+                'Description': 'One more!',
+            }
         )
         sample_sheet.add_sample(sample1)
         sample_sheet.add_sample(sample2)
@@ -335,7 +350,8 @@ class TestSampleSheet(TestCase):
             '|   Sample_ID | Sample_Name   | Library_ID   | Description   |\n'
             '|------------:|:--------------|:-------------|:--------------|\n'
             '|         493 | 10x-FA        | exp001       | A sentence!   |\n'
-            '|         207 | 10x-FB        | exp001       | One more!     |')
+            '|         207 | 10x-FB        | exp001       | One more!     |'
+        )
 
         self.assertMultiLineEqual(design, table)
 
@@ -346,28 +362,40 @@ class TestSampleSheet(TestCase):
             assert_raises(
                 ValueError,
                 sample_sheet.to_picard_basecalling_params,
-                temp_dir, temp_dir, lanes=1)
+                temp_dir,
+                temp_dir,
+                lanes=1,
+            )
 
     def test_to_picard_basecalling_params_incorrect_lanes_types(self):
         """Test ``to_picard_basecalling_params()`` incorrect lane types."""
         with TemporaryDirectory() as temp_dir:
-            sample = Sample({
-                'Sample_ID': 49,
-                'Sample_Name': '49-tissue',
-                'Library_ID': 'exp001',
-                'Description': 'Lorum ipsum!',
-                'index': 'GAACT',
-                'index2': 'AGTTC'})
+            sample = Sample(
+                {
+                    'Sample_ID': 49,
+                    'Sample_Name': '49-tissue',
+                    'Library_ID': 'exp001',
+                    'Description': 'Lorum ipsum!',
+                    'index': 'GAACT',
+                    'index2': 'AGTTC',
+                }
+            )
             sample_sheet = SampleSheet()
             sample_sheet.add_sample(sample)
             assert_raises(
                 ValueError,
                 sample_sheet.to_picard_basecalling_params,
-                temp_dir, temp_dir, lanes='string')
+                temp_dir,
+                temp_dir,
+                lanes='string',
+            )
             assert_raises(
                 ValueError,
                 sample_sheet.to_picard_basecalling_params,
-                temp_dir, temp_dir, lanes=[0.2, 2])
+                temp_dir,
+                temp_dir,
+                lanes=[0.2, 2],
+            )
 
     def test_to_picard_basecalling_params_insufficient_sample_attrs(self):
         """Test ``to_picard_basecalling_params()`` required sample attrs."""
@@ -377,7 +405,10 @@ class TestSampleSheet(TestCase):
             assert_raises(
                 ValueError,
                 sample_sheet.to_picard_basecalling_params,
-                temp_dir, temp_dir, lanes=1)
+                temp_dir,
+                temp_dir,
+                lanes=1,
+            )
 
     def test_to_picard_basecalling_params_different_index_sizes(self):
         """Test ``to_picard_basecalling_params()`` different index sizes."""
@@ -390,7 +421,10 @@ class TestSampleSheet(TestCase):
             assert_raises(
                 ValueError,
                 sample_sheet.to_picard_basecalling_params,
-                temp_dir, temp_dir, lanes=1)
+                temp_dir,
+                temp_dir,
+                lanes=1,
+            )
 
     def test_to_picard_basecalling_params_different_index2_sizes(self):
         """Test ``to_picard_basecalling_params()`` different index2 sizes."""
@@ -403,33 +437,43 @@ class TestSampleSheet(TestCase):
             assert_raises(
                 ValueError,
                 sample_sheet.to_picard_basecalling_params,
-                temp_dir, temp_dir, lanes=1)
+                temp_dir,
+                temp_dir,
+                lanes=1,
+            )
 
     def test_to_picard_basecalling_params_output_files(self):
         """Test ``to_picard_basecalling_params()`` output files"""
         bam_prefix = '/home/user'
         lanes = [1, 2]
         with TemporaryDirectory() as temp_dir:
-            sample1 = Sample({
-                'Sample_ID': 49,
-                'Sample_Name': '49-tissue',
-                'Library_ID': 'exp001',
-                'Description': 'Lorum ipsum!',
-                'index': 'GAACT',
-                'index2': 'AGTTC'})
-            sample2 = Sample({
-                'Sample_ID': 23,
-                'Sample_Name': '23-tissue',
-                'Library_ID': 'exp001',
-                'Description': 'Test description!',
-                'index': 'TGGGT',
-                'index2': 'ACCCA'})
+            sample1 = Sample(
+                {
+                    'Sample_ID': 49,
+                    'Sample_Name': '49-tissue',
+                    'Library_ID': 'exp001',
+                    'Description': 'Lorum ipsum!',
+                    'index': 'GAACT',
+                    'index2': 'AGTTC',
+                }
+            )
+            sample2 = Sample(
+                {
+                    'Sample_ID': 23,
+                    'Sample_Name': '23-tissue',
+                    'Library_ID': 'exp001',
+                    'Description': 'Test description!',
+                    'index': 'TGGGT',
+                    'index2': 'ACCCA',
+                }
+            )
 
             sample_sheet = SampleSheet()
             sample_sheet.add_sample(sample1)
             sample_sheet.add_sample(sample2)
             sample_sheet.to_picard_basecalling_params(
-                directory=temp_dir, bam_prefix=bam_prefix, lanes=lanes)
+                directory=temp_dir, bam_prefix=bam_prefix, lanes=lanes
+            )
 
             prefix = Path(temp_dir)
             assert_true((prefix / 'barcode_params.1.txt').exists())
@@ -439,55 +483,67 @@ class TestSampleSheet(TestCase):
 
             barcode_params = (
                 'barcode_sequence_1\tbarcode_sequence_2\tbarcode_name\tlibrary_name\n'  # noqa
-                'GAACT\tAGTTC\tGAACTAGTTC\texp001\n'                                    # noqa
-                'TGGGT\tACCCA\tTGGGTACCCA\texp001\n')                                   # noqa
+                'GAACT\tAGTTC\tGAACTAGTTC\texp001\n'  # noqa
+                'TGGGT\tACCCA\tTGGGTACCCA\texp001\n'
+            )  # noqa
 
             library_params = (
-                'BARCODE_1\tBARCODE_2\tOUTPUT\tSAMPLE_ALIAS\tLIBRARY_NAME\tDS\n'                                                     # noqa
-                'GAACT\tAGTTC\t/home/user/49-tissue.exp001/49-tissue.GAACTAGTTC.{lane}.bam\t49-tissue\texp001\tLorum ipsum!\n'       # noqa
+                'BARCODE_1\tBARCODE_2\tOUTPUT\tSAMPLE_ALIAS\tLIBRARY_NAME\tDS\n'  # noqa
+                'GAACT\tAGTTC\t/home/user/49-tissue.exp001/49-tissue.GAACTAGTTC.{lane}.bam\t49-tissue\texp001\tLorum ipsum!\n'  # noqa
                 'TGGGT\tACCCA\t/home/user/23-tissue.exp001/23-tissue.TGGGTACCCA.{lane}.bam\t23-tissue\texp001\tTest description!\n'  # noqa
-                'N\tN\t/home/user/unmatched.{lane}.bam\tunmatched\tunmatchedunmatched\t\n')                                          # noqa
+                'N\tN\t/home/user/unmatched.{lane}.bam\tunmatched\tunmatchedunmatched\t\n'
+            )  # noqa
 
             self.assertMultiLineEqual(
-                (prefix / 'barcode_params.1.txt').read_text(), barcode_params)
+                (prefix / 'barcode_params.1.txt').read_text(), barcode_params
+            )
             self.assertMultiLineEqual(
-                (prefix / 'barcode_params.2.txt').read_text(), barcode_params)
+                (prefix / 'barcode_params.2.txt').read_text(), barcode_params
+            )
             self.assertMultiLineEqual(
                 (prefix / 'library_params.1.txt').read_text(),
-                library_params.format(lane=1))
+                library_params.format(lane=1),
+            )
             self.assertMultiLineEqual(
                 (prefix / 'library_params.2.txt').read_text(),
-                library_params.format(lane=2))
+                library_params.format(lane=2),
+            )
 
     def test_add_section(self):
         """Test ``add_section()`` to add a section and bind key:values to it"""
         sample_sheet = SampleSheet()
         sample_sheet.add_section('Manifests')
-        sample_sheet.Manifests.PoolRNA = 'RNAMatrix.txt'
-        sample_sheet.Manifests.PoolDNA = 'DNAMatrix.txt'
+        sample_sheet.Manifests['PoolRNA'] = 'RNAMatrix.txt'
+        sample_sheet.Manifests['PoolDNA'] = 'DNAMatrix.txt'
 
-        assert_list_equal(sample_sheet.Manifests.keys, ['PoolRNA', 'PoolDNA'])
+        assert list(sample_sheet.Manifests.keys()) == ['PoolRNA', 'PoolDNA']
+
+        # Access via ``__getitem__()``
+        eq_(sample_sheet.Manifests['PoolRNA'], 'RNAMatrix.txt')
+        eq_(sample_sheet.Manifests['PoolDNA'], 'DNAMatrix.txt')
+
+        # Access via ``__getattr__()``
         eq_(sample_sheet.Manifests.PoolRNA, 'RNAMatrix.txt')
         eq_(sample_sheet.Manifests.PoolDNA, 'DNAMatrix.txt')
 
     def test_to_json(self):
         """Test ``SampleSheet.to_json()`` all output"""
         sample_sheet = SampleSheet()
-        sample_sheet.Header.IEM4FileVersion = 4
-        sample_sheet.Header.add_attr(
-            attr='Investigator_Name',
-            value='jdoe',
-            name='Investigator Name')
-        sample_sheet.Settings.CreateFastqForIndexReads = 1
-        sample_sheet.Settings.BarcodeMismatches = 2
+        sample_sheet.Header['IEM4FileVersion'] = 4
+        sample_sheet.Header['Investigator Name'] = 'jdoe'
+
+        sample_sheet.Settings['CreateFastqForIndexReads'] = 1
+        sample_sheet.Settings['BarcodeMismatches'] = 2
         sample_sheet.add_section('Manifests')
-        sample_sheet.Manifests.PoolDNA = "DNAMatrix.txt"
+        sample_sheet.Manifests['PoolDNA'] = "DNAMatrix.txt"
         sample_sheet.Reads = [151, 151]
-        sample = Sample({
-            'Sample_ID': '1823A',
-            'Sample_Name': '1823A-tissue',
-            'index': 'ACGT'
-        })
+        sample = Sample(
+            {
+                'Sample_ID': '1823A',
+                'Sample_Name': '1823A-tissue',
+                'index': 'ACGT',
+            }
+        )
         sample_sheet.add_sample(sample)
         actual = sample_sheet.to_json(indent=4, sort_keys=True)
         expected = (
@@ -556,7 +612,7 @@ class TestSampleSheet(TestCase):
         # Create a ``SampleSheet`` with a [Manifests] section
         sample_sheet1 = SampleSheet()
         sample_sheet1.add_section('Manifests')
-        sample_sheet1.Manifests.PoolRNA = 'RNAMatrix.txt'
+        sample_sheet1.Manifests['PoolRNA'] = 'RNAMatrix.txt'
 
         # Write to string and make temporary file
         string_handle = StringIO(newline=None)
@@ -566,7 +622,7 @@ class TestSampleSheet(TestCase):
 
         # Read temporary file and confirm section and it's data exists.
         sample_sheet2 = SampleSheet(filename)
-        assert_list_equal(sample_sheet2.Manifests.keys, ['PoolRNA'])
+        assert_list_equal(list(sample_sheet2.Manifests.keys()), ['PoolRNA'])
         eq_(sample_sheet2.Manifests.PoolRNA, 'RNAMatrix.txt')
 
     def test_write_custom_sections(self):
@@ -574,9 +630,9 @@ class TestSampleSheet(TestCase):
         # Create a ``SampleSheet`` with a [Manifests] section
         sample_sheet1 = SampleSheet()
         sample_sheet1.add_section('Manifests')
-        sample_sheet1.Manifests.PoolRNA = 'RNAMatrix.txt'
+        sample_sheet1.Manifests['PoolRNA'] = 'RNAMatrix.txt'
         sample_sheet1.add_section('TestingSection')
-        sample_sheet1.TestingSection.KeyNumber1 = 'DNAMatrix.txt'
+        sample_sheet1.TestingSection['KeyNumber1'] = 'DNAMatrix.txt'
 
         # Write to string and make temporary file
         string_handle = StringIO(newline=None)
@@ -586,9 +642,11 @@ class TestSampleSheet(TestCase):
 
         # Read temporary file and confirm section and it's data exists.
         sample_sheet2 = SampleSheet(filename)
-        assert_list_equal(sample_sheet2.Manifests.keys, ['PoolRNA'])
+        assert_list_equal(list(sample_sheet2.Manifests.keys()), ['PoolRNA'])
         eq_(sample_sheet2.Manifests.PoolRNA, 'RNAMatrix.txt')
-        assert_list_equal(sample_sheet2.TestingSection.keys, ['KeyNumber1'])
+        assert_list_equal(
+            list(sample_sheet2.TestingSection.keys()), ['KeyNumber1']
+        )
         eq_(sample_sheet2.TestingSection.KeyNumber1, 'DNAMatrix.txt')
 
     def test_write_invalid_num_blank_lines(self):
@@ -599,10 +657,12 @@ class TestSampleSheet(TestCase):
         string_handle = StringIO(newline=None)
         assert_raises(
             ValueError,
-            lambda: sample_sheet.write(string_handle, blank_lines=0.4))
+            lambda: sample_sheet.write(string_handle, blank_lines=0.4),
+        )
         assert_raises(
             ValueError,
-            lambda: sample_sheet.write(string_handle, blank_lines=-1))
+            lambda: sample_sheet.write(string_handle, blank_lines=-1),
+        )
 
     def test_iter(self):
         """Test ``__iter__()`` and ``__next__()``"""
@@ -682,6 +742,7 @@ class TestSampleSheet(TestCase):
             '\n│ 1826A     │ 100.0x treatment │'
             '\n│ 1826B     │ 0.5x treatment   │'
             '\n│ 1829A     │ 0.5x treatment   │'
-            '\n└───────────┴──────────────────┘')
+            '\n└───────────┴──────────────────┘'
+        )
 
         # self.assertMultiLineEqual(source, target)

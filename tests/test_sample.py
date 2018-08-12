@@ -39,17 +39,15 @@ class TestSample(TestCase):
 
     def test_promotion_of_read_structure(self):
         """Test that a Read_Structure key is promoted to ``ReadStructure``."""
-        sample = Sample({
-            'Read_Structure': '10M141T8B',
-            'index': 'ACGTGCNA'
-        })
+        sample = Sample({'Read_Structure': '10M141T8B', 'index': 'ACGTGCNA'})
         assert_is_instance(sample.Read_Structure, ReadStructure)
 
     def test_additional_key_is_added(self):
         """Test that an additional key is added to ``keys()`` method."""
         assert_set_equal(
             Sample({'Read_Structure': '151T'}).keys(),
-            {'index', 'Read_Structure', 'Sample_ID', 'Sample_Name'})
+            {'index', 'Read_Structure', 'Sample_ID', 'Sample_Name'},
+        )
 
     def test_read_structure_with_single_index(self):
         """Test that ``index`` is present with  a single-indexed read
@@ -79,7 +77,7 @@ class TestSample(TestCase):
             'Library_ID': '10x',
             'Lane': '1',
             'index': 'ATCTG',
-            'Read_Structure': '151T'
+            'Read_Structure': '151T',
         }
         assert_dict_equal(params, Sample(params).to_dict())
 
@@ -109,5 +107,7 @@ class TestSample(TestCase):
 
     def test_repr(self):
         """Test ``Sample.__repr__()`` after initialization."""
-        eq_(Sample().__repr__(),
-            'Sample({"Sample_ID": None, "Sample_Name": None, "index": None})')
+        eq_(
+            Sample().__repr__(),
+            'Sample({"Sample_ID": None, "Sample_Name": None, "index": None})',
+        )

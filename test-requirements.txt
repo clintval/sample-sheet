@@ -1,3 +1,4 @@
+black==18.6b2
 coverage==4.5
 flake8==3.5.0
 mypy==0.620
@@ -6,3 +7,4 @@ pylint==2.0.0
 pytest==3.6.3
 pytest-cov==2.5.1
 pytest-parallel==0.0.2
+pytest-sugar==0.9.1
