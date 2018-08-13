@@ -17,8 +17,6 @@ import os
 import sys
 
 
-from sample_sheet import __version__
-
 sys.path.insert(0, os.path.abspath('../'))
 
 
@@ -31,7 +29,7 @@ author = 'Clint Valentine'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = __version__
+release = '0.8.0'
 
 # -- General configuration ---------------------------------------------------
 
