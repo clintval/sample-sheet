@@ -61,14 +61,14 @@ class ReadStructure(object):
     A read structure is a sequence of tokens in the form ``<number><operator>``
     where ``<operator>`` can describe template, skip, index, or UMI bases.
 
-    ========  =====================================================
-    Operator  Description
-    ========  =====================================================
-    T         Template base (*e.g.* experimental DNA, RNA)
-    S         Bases to be skipped or ignored
-    B         Bases to be used as an index to identify the sample
-    M         Bases to be used as an index to identify the molecule
-    ========  =====================================================
+    ==========  =====================================================
+     Operator   Description
+    ==========  =====================================================
+    **T**       Template base (*e.g.* experimental DNA, RNA)
+    **S**       Bases to be skipped or ignored
+    **B**       Bases to be used as an index to identify the sample
+    **M**       Bases to be used as an index to identify the molecule
+    ==========  =====================================================
 
     Args:
         structure: Read structure string representation.
@@ -82,7 +82,7 @@ class ReadStructure(object):
         >>> rs.tokens
         ['10M', '141T', '8B']
 
-    Notes:
+    Note:
 
         This class does not currently support read structures where the last
         operator has ambiguous length by using ``<+>`` preceding the
