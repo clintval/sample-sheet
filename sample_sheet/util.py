@@ -12,6 +12,7 @@ def is_ipython_interpreter() -> bool:  # pragma: no cover
 
 
 def maybe_render_markdown(string: str) -> Any:
+    """Render a string as Markdown only if in an IPython interpreter."""
     if is_ipython_interpreter():  # pragma: no cover
         from IPython.display import Markdown  # type: ignore # noqa: E501
 

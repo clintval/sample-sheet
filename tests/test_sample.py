@@ -11,7 +11,7 @@ from nose.tools import eq_
 from unittest import TestCase
 
 from sample_sheet import *  # Test import of __all__
-from sample_sheet._sample_sheet import RECOMMENDED_KEYS
+from sample_sheet import RECOMMENDED_KEYS
 
 
 class TestSample(TestCase):

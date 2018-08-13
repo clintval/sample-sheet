@@ -1,21 +1,20 @@
-Tutorial
-========
+Quick Start
+===========
 
 To demonstrate the features of this library we will use a test file
 available at this remote location:
 
-```sample-sheet/tests/resources/paired-end-single-index.csv```_
-
-.. code:: python
+.. code-block:: python
 
    >>> from sample_sheet import SampleSheet
    >>> url = 'https://raw.githubusercontent.com/clintval/sample-sheet/master/tests/resources/paired-end-single-index.csv'
    >>> sample_sheet = SampleSheet(url)
 
+
 The metadata of the sample sheet can be accessed with the ``Header``,
 ``Reads`` and, ``Settings`` attributes:
 
-.. code:: python
+.. code-block:: python
 
    >>> sample_sheet.Header.Assay
    'SureSelectXT'
@@ -28,9 +27,9 @@ The metadata of the sample sheet can be accessed with the ``Header``,
 
 The samples can be accessed directly or *via* iteration:
 
-.. code:: python
+.. code-block:: python
 
-   >>> sample_sheet.samples  #doctest: +NORMALIZE_WHITESPACE
+   >>> sample_sheet.samples
    [Sample({'Sample_ID': '1823A', 'Sample_Name': '1823A-tissue', 'index': 'GAATCTGA'}),
     Sample({'Sample_ID': '1823B', 'Sample_Name': '1823B-tissue', 'index': 'AGCAGGAA'}),
     Sample({'Sample_ID': '1824A', 'Sample_Name': '1824A-tissue', 'index': 'GAGCTGAA'}),
@@ -38,15 +37,17 @@ The samples can be accessed directly or *via* iteration:
     Sample({'Sample_ID': '1826A', 'Sample_Name': '1826A-tissue', 'index': 'GAGTTAGC'}),
     Sample({'Sample_ID': '1826B', 'Sample_Name': '1823A-tissue', 'index': 'CGAACTTA'}),
     Sample({'Sample_ID': '1829A', 'Sample_Name': '1823B-tissue', 'index': 'GATAGACA'})]
-   >>> for sample in sample_sheet:
-   ...     print(sample)
-   ...     break
-   1823A
+   >>> first_sample, *other_samples = list(sample_sheet)
+   >>> first_sample
+   Sample({'Sample_ID': '1823A', 'Sample_Name': '1823A-tissue', 'index': 'GAATCTGA'})
+
+Defining Sample Read Structures
+-------------------------------
 
 If a column labeled ``Read_Structure`` is provided *per* sample, then
 additional functionality is enabled.
 
-.. code:: python
+.. code-block:: python
 
    >>> first_sample, *_ = sample_sheet.samples
    >>> first_sample.Read_Structure
@@ -57,18 +58,17 @@ additional functionality is enabled.
    ['151T', '8B', '151T']
 
 Sample Sheet Creation
-^^^^^^^^^^^^^^^^^^^^^
+---------------------
 
 Sample sheets can be created *de novo* and written to a file-like
 object. The following snippet shows how to add attributes to mandatory
 sections, add optional user-defined sections, and add samples before
-writing to the standard output.
+writing to nowhere.
 
-.. code:: python
+.. code-block:: python
 
-   >>> import sys
+   >>> import os
    >>> from sample_sheet import SampleSheet, Sample
-
    >>> sample_sheet = SampleSheet()
 
    # [Header] section
@@ -91,25 +91,5 @@ writing to the standard output.
    >>> sample = Sample(dict(Sample_ID='1823A', Sample_Name='1823A-tissue', index='ACGT'))
    >>> sample_sheet.add_sample(sample)
 
-   # Write to standard outpout!
-   >>> sample_sheet.write(sys.stdout)  #doctest +NORMALIZE_WHITESPACE
-   [Header],,,,,,,,
-   IEM4FileVersion,4,,,,,,,
-   Investigator Name,jdoe,,,,,,,
-   ,,,,,,,,
-   [Reads],,,,,,,,
-   151,,,,,,,,
-   151,,,,,,,,
-   ,,,,,,,,
-   [Manifests],,,,,,,,
-   PoolDNA,DNAMatrix.txt,,,,,,,
-   ,,,,,,,,
-   [Settings],,,,,,,,
-   CreateFastqForIndexReads,1,,,,,,,
-   BarcodeMismatches,2,,,,,,,
-   ,,,,,,,,
-   [Data],,,,,,,,
-   Sample_ID,Sample_Name,index,Description,Library_ID,Read_Structure,Reference_Name,Sample_Project,Target_Set
-   1823A,1823A-tissue,GAATCTGA,0.5x treatment,2017-01-20,151T8B151T,mm10,exp001,Intervals-001
-
-.. _``sample-sheet/tests/resources/paired-end-single-index.csv``: tests/resources/paired-end-single-index.csv
+   # Write the Sample Sheet!
+   >>> sample_sheet.write(open(os.devnull, 'w'))

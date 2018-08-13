@@ -1,9 +1,17 @@
-Welcome to sample-sheet documentation!
-======================================
+Welcome to ``sample-sheet`` documentation!
+==========================================
 
 .. toctree::
    :maxdepth: 2
    :caption: Main Documentation
 
-   Tutorial
+   quick-start
    CONTRIBUTING
+
+sample_sheet
+============
+
+.. toctree::
+   :maxdepth: 4
+
+   sample_sheet

@@ -2,7 +2,7 @@ from nose.tools import assert_is_none
 
 from unittest import TestCase
 
-from sample_sheet._sample_sheet import Section
+from sample_sheet import Section
 
 
 class TestSection(TestCase):
