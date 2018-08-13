@@ -57,16 +57,20 @@ VALID_ASCII: Set[str] = set(ascii_letters + digits + punctuation + ' \n\r')
 class ReadStructure(object):
     """An object describing the order, number, and type of bases in a read.
 
-    A read structure is a sequence of tokens in the form ``<number><type>``
-    where ``<type>`` can describe template, skip, index, or UMI bases.
+    A read structure is a sequence of tokens in the form ``<number><operator>``
+    where ``<operator>`` can describe template, skip, index, or UMI bases.
 
-        - T: template base
-        - S: skipped base
-        - B: sample index
-        - M: unique molecular identifer
+    ========  =====================================================
+    Operator  Description
+    ========  =====================================================
+    T         Template base (*e.g.* experimental DNA, RNA)
+    S         Bases to be skipped or ignored
+    B         Bases to be used as an index to identify the sample
+    M         Bases to be used as an index to identify the molecule
+    ========  =====================================================
 
     Args:
-        structure: String representation of a read structure.
+        structure: Read structure string representation.
 
     Examples:
         >>> rs = ReadStructure("10M141T8B")
@@ -80,15 +84,15 @@ class ReadStructure(object):
     Notes:
 
         This class does not currently support read structures where the last
-        token has ambiguous length by using the ``<+>`` operator preceding the
-        ``<type>``.
+        operator has ambiguous length by using ``<+>`` preceding the
+        ``<operator>``.
 
-        Definitions of read structure types can be found at the following
+        Definitions of common read structure uses can be found at the following
         location:
 
             - https://github.com/nh13/read-structure-examples
 
-        Discussion on the topic in hts-specs:
+        Discussion on the topic of read structure use in ``hts-specs``:
 
             - https://github.com/samtools/hts-specs/issues/270
 
@@ -96,18 +100,23 @@ class ReadStructure(object):
 
     _token_pattern = re.compile(r'(\d+[BMST])')
 
-    # Token can repeat one or more times along the entire string.
+    # operator can repeat one or more times along the entire string.
     _valid_pattern = re.compile(r'^{}+$'.format(_token_pattern.pattern))
 
     _index_pattern = re.compile(r'(\d+B)')
     _umi_pattern = re.compile(r'(\d+M)')
     _skip_pattern = re.compile(r'(\d+S)')
     _template_pattern = re.compile(r'(\d+T)')
+    _nonnumber_pattern = re.compile(r'\D')
 
     def __init__(self, structure: str) -> None:
         if not bool(self._valid_pattern.match(structure)):
             raise ValueError(f'Not a valid read structure: "{structure}"')
         self.structure = structure
+
+    def _sum_cycles_from_tokens(self, tokens: List[str]) -> int:
+        """Sum the total number of cycles over a list of tokens."""
+        return sum((int(self._nonnumber_pattern.sub('', t)) for t in tokens))
 
     @property
     def is_indexed(self) -> bool:
@@ -136,55 +145,71 @@ class ReadStructure(object):
 
     @property
     def has_indexes(self) -> bool:
-        """Return if this read structure has any index tokens."""
+        """Return if this read structure has any index operators."""
         return len(self._index_pattern.findall(self.structure)) > 0
 
     @property
     def has_skips(self) -> bool:
-        """Return if this read structure has any skip tokens."""
+        """Return if this read structure has any skip operators."""
         return len(self._skip_pattern.findall(self.structure)) > 0
 
     @property
     def has_umi(self) -> bool:
-        """Return if this read structure has any UMI tokens."""
+        """Return if this read structure has any UMI operators."""
         return len(self._umi_pattern.findall(self.structure)) > 0
 
     @property
     def index_cycles(self) -> int:
         """The number of cycles dedicated to indexes."""
-        tokens = self._index_pattern.findall(self.structure)
-        return sum((int(re.sub(r'\D', '', token)) for token in tokens))
+        return self._sum_cycles_from_tokens(self.index_tokens)
 
     @property
     def template_cycles(self) -> int:
         """The number of cycles dedicated to template."""
-        tokens = self._template_pattern.findall(self.structure)
-        return sum((int(re.sub(r'\D', '', token)) for token in tokens))
+        return sum((int(re.sub(r'\D', '', op)) for op in self.template_tokens))
 
     @property
     def skip_cycles(self) -> int:
         """The number of cycles dedicated to skips."""
-        tokens = self._skip_pattern.findall(self.structure)
-        return sum((int(re.sub(r'\D', '', token)) for token in tokens))
+        return sum((int(re.sub(r'\D', '', op)) for op in self.skip_tokens))
 
     @property
     def umi_cycles(self) -> int:
         """The number of cycles dedicated to UMI."""
-        tokens = self._umi_pattern.findall(self.structure)
-        return sum((int(re.sub(r'\D', '', token)) for token in tokens))
+        return sum((int(re.sub(r'\D', '', op)) for op in self.umi_tokens))
 
     @property
     def total_cycles(self) -> int:
         """The number of total number of cycles in the structure."""
-        return sum((int(re.sub(r'\D', '', token)) for token in self.tokens))
+        return sum((int(re.sub(r'\D', '', op)) for op in self.tokens))
 
     @property
     def tokens(self) -> List[str]:
         """Return a list of all tokens in the read structure."""
         return self._token_pattern.findall(self.structure)
 
+    @property
+    def index_tokens(self) -> List[str]:
+        """Return a list of all index tokens in the read structure."""
+        return self._index_pattern.findall(self.structure)
+
+    @property
+    def skip_tokens(self) -> List[str]:
+        """Return a list of all skip tokens in the read structure."""
+        return self._skip_pattern.findall(self.structure)
+
+    @property
+    def template_tokens(self) -> List[str]:
+        """Return a list of all template tokens in the read structure."""
+        return self._template_pattern.findall(self.structure)
+
+    @property
+    def umi_tokens(self) -> List[str]:
+        """Return a list of all UMI tokens in the read structure."""
+        return self._umi_pattern.findall(self.structure)
+
     def copy(self) -> 'ReadStructure':
-        """Returns a deep copy of this read structure."""
+        """Return a deep copy of this read structure."""
         return ReadStructure(self.structure)
 
     def __eq__(self, other: object) -> bool:
@@ -194,12 +219,14 @@ class ReadStructure(object):
         return self.structure == other.structure
 
     def __repr__(self) -> str:
+        """Return an executeable ``__repr__()``."""
         return (
             f'{self.__class__.__qualname__}('
             f'structure=\'{self.structure}\')'
         )
 
     def __str__(self) -> str:
+        """Cast this object to string."""
         return self.structure
 
 
@@ -207,8 +234,11 @@ class Sample(CaseInsensitiveDict):
     """A single sample for a sample sheet.
 
     This class is built with the keys and values in the ``"[Data]"`` section of
-    the sample sheet. Although no keys are explicitly required it is
-    recommended to at least use the following column names:
+    the sample sheet. As specified by Illumina, the only required keys are:
+
+        - ``"Sample_ID"``
+
+    Although this library recommends you define the following column names:
 
         - ``"Sample_ID"``
         - ``"Sample_Name"``
@@ -248,7 +278,7 @@ class Sample(CaseInsensitiveDict):
             self[key] = None
 
         for key, value in data.items():
-            # Promote a ``Read_Structure`` key to ``ReadStructure``.
+            # Promote a ``Read_Structure`` key to :class:`ReadStructure`.
             # Support case insensitivity and any amount of underscores.
             if key.lower().replace('_', '') == 'readstructure':
                 value = ReadStructure(str(value))
@@ -309,12 +339,13 @@ class Sample(CaseInsensitiveDict):
         return super().get(attr)
 
     def __repr__(self) -> str:
-        """Shows a simplified constructor command to initialize this object."""
+        """Return an executeable ``__repr__()``."""
         args = {key: getattr(self, key) for key in RECOMMENDED_KEYS}
         args_str = args.__repr__()
         return f'{self.__class__.__qualname__}({args_str})'
 
     def __str__(self) -> str:
+        """Cast this object to string."""
         return str(self.Sample_ID) if self.Sample_ID is not None else ''
 
 
@@ -354,7 +385,8 @@ class SampleSheet(object):
     ================  ======================================================
 
     Args:
-        path:  Any path supported by ``pathlib.Path`` and/or ``smart_open``.
+        path:  Any path supported by :class:`pathlib.Path` and/or
+            :class:`smart_open.smart_open`.
 
     """
 
@@ -380,7 +412,7 @@ class SampleSheet(object):
             self._parse(self.path)
 
     def add_section(self, section_name: str) -> None:
-        """Add a section to the ``SampleSheet``."""
+        """Add a section to the :class:`SampleSheet`."""
         section_name = self._whitespace_re.sub('_', section_name)
         self._sections.append(section_name)
         setattr(self, section_name, Section())
@@ -620,7 +652,7 @@ class SampleSheet(object):
         sample.sample_sheet = self
         self._samples.append(sample)
 
-    def add_samples(self, samples: List[Sample]) -> None:
+    def add_samples(self, samples: Iterable[Sample]) -> None:
         """Add samples in an iterable to this :class:`SampleSheet`."""
         for sample in samples:
             self.add_sample(sample)
