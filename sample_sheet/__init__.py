@@ -3,6 +3,7 @@ import json
 import os
 import re
 import sys
+import warnings
 
 from contextlib import ExitStack
 from itertools import chain, repeat, islice
@@ -60,14 +61,14 @@ class ReadStructure(object):
     A read structure is a sequence of tokens in the form ``<number><operator>``
     where ``<operator>`` can describe template, skip, index, or UMI bases.
 
-    ========  =====================================================
-    Operator  Description
-    ========  =====================================================
-    T         Template base (*e.g.* experimental DNA, RNA)
-    S         Bases to be skipped or ignored
-    B         Bases to be used as an index to identify the sample
-    M         Bases to be used as an index to identify the molecule
-    ========  =====================================================
+    ==========  =====================================================
+     Operator   Description
+    ==========  =====================================================
+    **T**       Template base (*e.g.* experimental DNA, RNA)
+    **S**       Bases to be skipped or ignored
+    **B**       Bases to be used as an index to identify the sample
+    **M**       Bases to be used as an index to identify the molecule
+    ==========  =====================================================
 
     Args:
         structure: Read structure string representation.
@@ -81,7 +82,7 @@ class ReadStructure(object):
         >>> rs.tokens
         ['10M', '141T', '8B']
 
-    Notes:
+    Note:
 
         This class does not currently support read structures where the last
         operator has ambiguous length by using ``<+>`` preceding the
@@ -274,9 +275,6 @@ class Sample(CaseInsensitiveDict):
         self._store: Mapping
         self.sample_sheet: Optional[SampleSheet] = None
 
-        for key in RECOMMENDED_KEYS:
-            self[key] = None
-
         for key, value in data.items():
             # Promote a ``Read_Structure`` key to :class:`ReadStructure`.
             # Support case insensitivity and any amount of underscores.
@@ -418,11 +416,18 @@ class SampleSheet(object):
         setattr(self, section_name, Section())
 
     @property
-    def all_sample_keys(self) -> Set[str]:
+    def all_sample_keys(self) -> List[str]:
         """Return the unique keys of all samples in this :class:`SampleSheet`.
 
+        The keys are discovered first by the order of samples and second by
+        the order of keys upon those samples.
+
         """
-        return set(chain.from_iterable([sample.keys() for sample in self]))
+        all_keys: List[str] = []
+        for key in chain.from_iterable([sample.keys() for sample in self]):
+            if key not in all_keys:
+                all_keys.append(key)
+        return all_keys
 
     @property
     def experimental_design(self) -> Any:
@@ -551,7 +556,24 @@ class SampleSheet(object):
         Args:
             sample: :class:`Sample` to add to this :class:`SampleSheet`.
 
+        Note:
+
+            It is unclear if the Illumina specification truly allows for
+            equivalent samples to exist on the same sample sheet. To mitigate
+            the warnings in this library when you encounter such a case, use
+            a code pattern like the following:
+
+            >>> import warnings
+            >>> warnings.simplefilter("ignore")
+            >>> from sample_sheet import SampleSheet
+            >>> SampleSheet('tests/resources/single-end-colliding-sample-ids.csv');
+            SampleSheet('tests/resources/single-end-colliding-sample-ids.csv')
+
         """
+        # Do not allow samples without Sample_ID defined.
+        if sample.Sample_ID is None:
+            raise ValueError('Sample must have "Sample_ID" defined.')
+
         # Set whether the samples will have ``index`` or ``index2``.
         if len(self.samples) == 0:
             self.samples_have_index = sample.index is not None
@@ -596,11 +618,12 @@ class SampleSheet(object):
         # both if they have been defined.
         for other in self.samples:
             if sample == other:
-                raise ValueError(
-                    f'Cannot add two samples with the same '
-                    f'`Sample_ID`, `Library_ID`, and `Lane`: '
-                    f'sample - {sample}, other - {other}'
+                message = (
+                    f'Two equivalent samples added:'
+                    f'\n\n1): {sample.__repr__()}\n2): {other.__repr__()}\n'
                 )
+                # TODO: Look into if this is truly illegal or not.
+                warnings.warn(UserWarning(message))
             if sample.index is None and self.samples_have_index:
                 raise ValueError(
                     f'Cannot add a sample without attribute `index` if a '
@@ -847,12 +870,13 @@ class SampleSheet(object):
             blank_lines: Number of blank lines to write between sections.
 
         """
-        writer = csv.writer(handle)
-        csv_width = max(len(RECOMMENDED_KEYS), len(self.all_sample_keys))
-        section_order = ['Header', 'Reads'] + self._sections + ['Settings']
-
         if not isinstance(blank_lines, int) or blank_lines <= 0:
             raise ValueError('Number of blank lines must be a positive int.')
+
+        writer = csv.writer(handle)
+        csv_width: int = max([len(self.all_sample_keys), 2])
+
+        section_order = ['Header', 'Reads'] + self._sections + ['Settings']
 
         def pad_iterable(
             iterable: Iterable, size: int = csv_width, padding: str = ''
@@ -877,12 +901,10 @@ class SampleSheet(object):
             write_blank_lines(writer)
 
         writer.writerow(pad_iterable(['[Data]'], csv_width))
-        other_keys = self.all_sample_keys - set(RECOMMENDED_KEYS)
-        samples_header = RECOMMENDED_KEYS + sorted(other_keys)
-        writer.writerow(pad_iterable(samples_header, csv_width))
+        writer.writerow(pad_iterable(self.all_sample_keys, csv_width))
 
         for sample in self.samples:
-            line = [getattr(sample, key) for key in samples_header]
+            line = [getattr(sample, key) for key in self.all_sample_keys]
             writer.writerow(pad_iterable(line, csv_width))
 
     def __len__(self) -> int:

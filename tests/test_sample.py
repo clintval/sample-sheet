@@ -1,11 +1,11 @@
 import pytest
 
+from nose.tools import assert_dict_equal
 from nose.tools import assert_is_instance
 from nose.tools import assert_is_none
-from nose.tools import assert_dict_equal
+from nose.tools import assert_list_equal
 from nose.tools import assert_not_equal
 from nose.tools import assert_raises
-from nose.tools import assert_set_equal
 from nose.tools import eq_
 
 from unittest import TestCase
@@ -27,11 +27,6 @@ class TestSample(TestCase):
         for key in ('not_real', 'fake'):
             assert_is_none(getattr(Sample(), key))
 
-    def test_keys_on_blank_init(self):
-        """Test that recommended keys exist on blank initialization."""
-        sample = Sample()
-        assert_set_equal(set(sample.keys()), set(RECOMMENDED_KEYS))
-
     def test_promotion_of_read_structure(self):
         """Test that a Read_Structure key is promoted to ``ReadStructure``."""
         sample = Sample({'Read_Structure': '10M141T8B', 'index': 'ACGTGCNA'})
@@ -39,9 +34,8 @@ class TestSample(TestCase):
 
     def test_additional_key_is_added(self):
         """Test that an additional key is added to ``keys()`` method."""
-        assert_set_equal(
-            set(Sample({'Read_Structure': '151T'}).keys()),
-            {'index', 'Read_Structure', 'Sample_ID', 'Sample_Name'},
+        assert_list_equal(
+            list(Sample({'Read_Structure': '151T'}).keys()), ['Read_Structure']
         )
 
     def test_read_structure_with_single_index(self):
