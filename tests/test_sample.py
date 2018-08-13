@@ -30,12 +30,7 @@ class TestSample(TestCase):
     def test_keys_on_blank_init(self):
         """Test that recommended keys exist on blank initialization."""
         sample = Sample()
-        assert_set_equal(sample.keys(), set(RECOMMENDED_KEYS))
-
-    def test_add_key_value(self):
-        """Test that new keys with have whitepsace converted to underscores."""
-        sample = Sample({'Sample ID': '2314'})
-        eq_(sample.Sample_ID, '2314')
+        assert_set_equal(set(sample.keys()), set(RECOMMENDED_KEYS))
 
     def test_promotion_of_read_structure(self):
         """Test that a Read_Structure key is promoted to ``ReadStructure``."""
@@ -45,7 +40,7 @@ class TestSample(TestCase):
     def test_additional_key_is_added(self):
         """Test that an additional key is added to ``keys()`` method."""
         assert_set_equal(
-            Sample({'Read_Structure': '151T'}).keys(),
+            set(Sample({'Read_Structure': '151T'}).keys()),
             {'index', 'Read_Structure', 'Sample_ID', 'Sample_Name'},
         )
 
@@ -69,17 +64,17 @@ class TestSample(TestCase):
         assert_raises(ValueError, Sample, {'index': 'ACUGTN'})
         assert_raises(ValueError, Sample, {'index2': 'ACUGTN'})
 
-    def test_to_dict(self):
-        """Test ``Sample.to_dict()``, and all values strings"""
+    def test_equal_to_dict(self):
+        """Test that ``Sample`` is dict equivalent"""
         params = {
             'Sample_ID': '1',
             'Sample_Name': '1',
             'Library_ID': '10x',
             'Lane': '1',
             'index': 'ATCTG',
-            'Read_Structure': '151T',
+            'Read_Structure': ReadStructure('151T'),
         }
-        assert_dict_equal(params, Sample(params).to_dict())
+        assert_dict_equal(params, dict(Sample(params)))
 
     def test_eq(self):
         """Test equality based only on ``Sample_ID`` and ``Library_ID``."""
@@ -102,12 +97,15 @@ class TestSample(TestCase):
 
     def test_str(self):
         """Test ``sample.__str__()``"""
-        eq_(str(Sample()), 'None')
+        eq_(str(Sample()), '')
         eq_(str(Sample({'Sample_ID': 245})), '245')
 
     def test_repr(self):
         """Test ``Sample.__repr__()`` after initialization."""
         eq_(
             Sample().__repr__(),
-            'Sample({"Sample_ID": None, "Sample_Name": None, "index": None})',
+            (
+                'Sample({\'Sample_ID\': None, '
+                '\'Sample_Name\': None, \'index\': None})'
+            ),
         )

@@ -684,12 +684,17 @@ class TestSampleSheet(TestCase):
     def test_str(self):
         """Test ``__str__()``, when not printing to a TTY"""
         infile = RESOURCES / 'paired-end-single-index.csv'
-        eq_(SampleSheet(infile).__str__(), 'SampleSheet("{}")'.format(infile))
+        eq_(
+            SampleSheet(infile).__str__(), 'SampleSheet(\'{}\')'.format(infile)
+        )
 
     def test_repr(self):
         """Test ``__repr__()``"""
         infile = RESOURCES / 'paired-end-single-index.csv'
-        eq_(SampleSheet(infile).__repr__(), 'SampleSheet("{}")'.format(infile))
+        eq_(
+            SampleSheet(infile).__repr__(),
+            'SampleSheet(\'{}\')'.format(infile),
+        )
 
     def test_repr_tty(self):
         """Test ``_repr_tty_()``"""

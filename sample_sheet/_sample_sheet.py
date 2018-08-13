@@ -193,14 +193,15 @@ class ReadStructure(object):
 
     def __repr__(self) -> str:
         return (
-            f'{self.__class__.__qualname__}(' f'structure="{self.structure}")'
+            f'{self.__class__.__qualname__}('
+            f'structure=\'{self.structure}\')'
         )
 
     def __str__(self) -> str:
         return self.structure
 
 
-class Sample(object):
+class Sample(CaseInsensitiveDict):
     """A single sample for a sample sheet.
 
     This class is built with the keys and values in the [Data] section of the
@@ -211,48 +212,48 @@ class Sample(object):
     ``ReadStructure`` and additional functionality is enabled.
 
     Args:
-        mappable: The key-value pairs describing this sample.
+        data: The key-value pairs describing this sample.
 
     Examples:
         >>> mapping = {"Sample_ID": "87", "Sample_Name": "3T", "index": "A"}
         >>> sample = Sample(mapping)
         >>> sample
-        Sample({"Sample_ID": "87", "Sample_Name": "3T", "index": "A"})
+        Sample({'Sample_ID': '87', 'Sample_Name': '3T', 'index': 'A'})
         >>> sample = Sample({'Read_Structure': '151T'})
         >>> sample.Read_Structure
-        ReadStructure(structure="151T")
+        ReadStructure(structure='151T')
 
     """
 
-    _valid_index_key_pattern = re.compile(r'index2?')
+    _valid_index_key_pattern = re.compile(r'index\d?')
     _valid_index_value_pattern = re.compile(r'^[ACGTN]*$')
     _whitespace_re = re.compile(r'\s+')
 
-    def __init__(self, mappable: Optional[Mapping]=None) -> None:
-        mappable = dict() if mappable is None else mappable
+    def __init__(
+        self, data: Optional[Mapping] = None, **kwargs: Mapping
+    ) -> None:
+        super().__init__()
+        data = {**data, **kwargs} if data is not None else kwargs
+
+        self._store: Mapping
         self.sample_sheet: Optional[SampleSheet] = None
-        self._other_keys: Set[str] = set()
 
-        # Explicitly define the recommended keys as None.
         for key in RECOMMENDED_KEYS:
-            setattr(self, key, None)
+            self[key] = None
 
-        for key, value in mappable.items():
-            # Convert whitepsace to a single underscore.
-            key = self._whitespace_re.sub('_', key)
-            self._other_keys.add(key)
-
+        for key, value in data.items():
             # Promote a ``Read_Structure`` key to ``ReadStructure``.
-            value = ReadStructure(value) if key == 'Read_Structure' else value
+            # Support case insensitivity and any amount of underscores.
+            if key.lower().replace('_', '') == 'readstructure':
+                value = ReadStructure(str(value))
 
             # Check to make sure the index is valid if it is supplied.
             if self._valid_index_key_pattern.match(key) and not bool(
-                self._valid_index_value_pattern.match(value)
+                self._valid_index_value_pattern.match(str(value))
             ):
                 raise ValueError(f'Not a valid index: {value}')
 
-            setattr(self, key, value)
-
+            self[key] = value
         if (
             self.Read_Structure is not None
             and self.Read_Structure.is_single_indexed
@@ -274,17 +275,9 @@ class Sample(object):
                 f'also: {self}'
             )
 
-    def keys(self) -> Set[str]:
-        """Return all public attributes."""
-        return set(RECOMMENDED_KEYS).union(self._other_keys)
-
-    def to_dict(self) -> Mapping[str, str]:
-        """Return the key value pairs associated with this ``Sample``"""
-        return {key: str(getattr(self, key)) for key in self.keys()}
-
-    def __getattr__(self, attr: Any) -> Optional[Any]:
-        """Return ``None`` if an attribute is undefined."""
-        return self.__dict__.get(attr)
+    def to_json(self) -> Mapping:
+        """Return the properties of this ``Sample`` as JSON serializable."""
+        return {str(x): str(y) for x, y in self.items()}
 
     def __eq__(self, other: object) -> bool:
         """Samples are equal if ``Sample_ID``, ``Library_ID``, and ``Lane are
@@ -300,17 +293,23 @@ class Sample(object):
         )
         return is_equal
 
+    def __getattr__(self, attr: Any) -> Optional[Any]:
+        """Return ``None`` if an attribute is undefined."""
+        return super().get(attr)
+
     def __repr__(self) -> str:
         """Shows a simplified constructor command to initialize this object."""
         args = {key: getattr(self, key) for key in RECOMMENDED_KEYS}
-        args_str = args.__repr__().replace('\'', '"')
+        args_str = args.__repr__()
         return f'{self.__class__.__qualname__}({args_str})'
 
     def __str__(self) -> str:
-        return str(self.Sample_ID)
+        return str(self.Sample_ID) if self.Sample_ID is not None else ''
 
 
-class SampleSheetSection(CaseInsensitiveDict):
+class Section(CaseInsensitiveDict):
+    """Case insensitive dictionary for retrieval, returns None as default."""
+
     def __init__(
         self, data: Optional[Mapping] = None, **kwargs: Mapping
     ) -> None:
@@ -318,6 +317,7 @@ class SampleSheetSection(CaseInsensitiveDict):
         super().__init__(data=data, **kwargs)
 
     def __getattr__(self, attr: Any) -> Optional[Any]:
+        """Return ``None`` if an attribute is undefined."""
         return super().get(attr)
 
 
@@ -355,8 +355,8 @@ class SampleSheet(object):
         self.samples_have_index: Optional[bool] = None
         self.samples_have_index2: Optional[bool] = None
 
-        self.Header: SampleSheetSection = SampleSheetSection()
-        self.Settings: SampleSheetSection = SampleSheetSection()
+        self.Header: Section = Section()
+        self.Settings: Section = Section()
 
         if self.path:
             self._parse(self.path)
@@ -365,7 +365,7 @@ class SampleSheet(object):
         """Add a section to the ``SampleSheet``."""
         section_name = self._whitespace_re.sub('_', section_name)
         self._sections.append(section_name)
-        setattr(self, section_name, SampleSheetSection())
+        setattr(self, section_name, Section())
 
     @property
     def all_sample_keys(self) -> Set[str]:
@@ -470,7 +470,7 @@ class SampleSheet(object):
             # [<Other>] - keys in first column and values in second column.
             else:
                 key, value, *_ = line
-                section: SampleSheetSection = getattr(self, section_name)
+                section: Section = getattr(self, section_name)
                 section[key] = value
                 continue
 
@@ -615,7 +615,7 @@ class SampleSheet(object):
             'Header': dict(self.Header),
             'Reads': self.Reads,
             'Settings': dict(self.Settings),
-            'Data': [sample.to_dict() for sample in self.samples],
+            'Data': [sample.to_json() for sample in self.samples],
             **{title: dict(getattr(self, title)) for title in self._sections},
         }
         return json.dumps(content, **kwargs)  # type: ignore
@@ -843,7 +843,7 @@ class SampleSheet(object):
 
     def __repr__(self) -> str:
         """Show the constructor command to initialize this object."""
-        path = f'"{self.path}"' if self.path else 'None'
+        path = f'\'{self.path}\'' if self.path else 'None'
         return f'{self.__class__.__qualname__}({path})'
 
     def __str__(self) -> str:

@@ -110,7 +110,9 @@ class TestReadStructure(TestCase):
 
     def test_repr(self):
         """Test ``ReadStructure.__repr__()`` after initialization"""
-        eq_(ReadStructure('51T').__repr__(), 'ReadStructure(structure="51T")')
+        eq_(
+            ReadStructure('51T').__repr__(), 'ReadStructure(structure=\'51T\')'
+        )
 
     def test_str(self):
         """Test ``ReadStructure.__str__()`` after initialization"""
