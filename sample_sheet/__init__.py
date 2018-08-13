@@ -60,14 +60,14 @@ class ReadStructure(object):
     A read structure is a sequence of tokens in the form ``<number><operator>``
     where ``<operator>`` can describe template, skip, index, or UMI bases.
 
-    ========  ======================================================
+    ========  =====================================================
     Operator  Description
-    ========  ======================================================
+    ========  =====================================================
     ``T``     Template base (_e.g._ experimental DNA, RNA)
     ``S``     Bases to be skipped or ignored
-    ``B``     Bases to be used as an index to identify the sample.
-    ``M``     Bases to be used as an index to identify the molecule.
-    ========  ======================================================
+    ``B``     Bases to be used as an index to identify the sample
+    ``M``     Bases to be used as an index to identify the molecule
+    ========  =====================================================
 
     Args:
         structure: Read structure string representation.
