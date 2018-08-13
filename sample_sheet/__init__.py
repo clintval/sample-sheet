@@ -63,10 +63,17 @@ class ReadStructure(object):
     ========  =====================================================
     Operator  Description
     ========  =====================================================
+<<<<<<< HEAD
     T         Template base (*e.g.* experimental DNA, RNA)
     S         Bases to be skipped or ignored
     B         Bases to be used as an index to identify the sample
     M         Bases to be used as an index to identify the molecule
+=======
+    ``T``     Template base (_e.g._ experimental DNA, RNA)
+    ``S``     Bases to be skipped or ignored
+    ``B``     Bases to be used as an index to identify the sample
+    ``M``     Bases to be used as an index to identify the molecule
+>>>>>>> 2aa05c1... Update badge order and README
     ========  =====================================================
 
     Args:
