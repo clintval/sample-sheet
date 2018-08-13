@@ -12,7 +12,7 @@ The complete test suite is configured through `Tox`:
 
 List all environments with:
 
-```bash
+```
 ❯ tox -av
 using tox.ini: .../sample-sheet/tox.ini
 using tox-3.1.2 from ../tox/__init__.py

@@ -90,8 +90,10 @@ class TestReadStructure(TestCase):
         """Test all tokens of a paired-end dual-indexed umi skip structure"""
         structure = '8M1S142T8B8B8M1S142T'
         read_structure = ReadStructure(structure)
-        eq_(read_structure.tokens,
-            ['8M', '1S', '142T', '8B', '8B', '8M', '1S', '142T'])
+        eq_(
+            read_structure.tokens,
+            ['8M', '1S', '142T', '8B', '8B', '8M', '1S', '142T'],
+        )
 
     def test_copy(self):
         """Test a shallow copy with ``copy()``"""
@@ -108,7 +110,9 @@ class TestReadStructure(TestCase):
 
     def test_repr(self):
         """Test ``ReadStructure.__repr__()`` after initialization"""
-        eq_(ReadStructure('51T').__repr__(), 'ReadStructure(structure="51T")')
+        eq_(
+            ReadStructure('51T').__repr__(), 'ReadStructure(structure=\'51T\')'
+        )
 
     def test_str(self):
         """Test ``ReadStructure.__str__()`` after initialization"""
