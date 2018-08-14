@@ -21,4 +21,4 @@ Features:
 - _de novo_ creation creation of Sample Sheets
 - Exporting Sample Sheets to JSON
 
-Read the documentation at: [sample-sheet.readthedocs.io](http://sample-sheet.readthedocs.io/en/latest/)
+Read the documentation at: [sample-sheet.readthedocs.io](http://sample-sheet.readthedocs.io/)
