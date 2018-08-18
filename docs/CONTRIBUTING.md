@@ -1,7 +1,6 @@
-# Contributing
+# How to Contribute
 
 Pull requests, feature requests, and issues welcome!
-
 The complete test suite is configured through `Tox`:
 
 ```bash

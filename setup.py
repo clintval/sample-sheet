@@ -23,20 +23,19 @@ setuptools.setup(
         'terminaltables',
     ],
     # extras_requires={'cli': ['terminaltables']},
-    include_package_data=True,
     scripts=['scripts/sample-sheet'],
     keywords='illumina samplesheet sample sheet parser bioinformatics',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha'
-        'Intended Audience :: Developers'
-        'Intended Audience :: Science/Research'
-        'License :: OSI Approved :: MIT License'
-        'Topic :: Scientific/Engineering :: Bio-Informatics'
-        'Programming Language :: Python :: 3.6'
-        'Programming Language :: Python :: 3.7'
+        'Development Status :: 2 - Pre-Alpha',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: MIT License',
+        'Topic :: Scientific/Engineering :: Bio-Informatics',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
     project_urls={
-        'Documentation': 'https://sample-sheet.readthedocs.com',
+        'Documentation': 'https://sample-sheet.readthedocs.io',
         'Issue-Tracker': 'https://github.com/clintval/sample-sheet/issues',
     },
 )
