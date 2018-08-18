@@ -14,7 +14,6 @@ from textwrap import wrap
 from requests.structures import CaseInsensitiveDict
 from smart_open import smart_open  # type: ignore
 from tabulate import tabulate  # type: ignore
-from terminaltables import SingleTable  # type: ignore
 from typing import (
     Any,
     Generator,
@@ -32,6 +31,15 @@ from .util import maybe_render_markdown
 __all__: List[str] = ['ReadStructure', 'Sample', 'SampleSheet']
 
 __version__ = '0.8.0'
+
+
+try:  # pragma: no cover
+    from terminaltables import SingleTable  # type: ignore
+
+    HAS_TERMINALTABLES = True
+except ImportError:
+    HAS_TERMINALTABLES = False
+
 
 DESIGN_HEADER: List[str] = [
     'Sample_ID',
@@ -929,11 +937,14 @@ class SampleSheet(object):
 
         """
         try:
-            isatty = os.isatty(sys.stdout.fileno())
+            in_terminal = os.isatty(sys.stdout.fileno())
         except OSError:  # pragma: no cover
-            isatty = False
+            in_terminal = False
 
-        return self._repr_tty_() if isatty else self.__repr__()
+        if in_terminal and HAS_TERMINALTABLES:
+            return self._repr_tty_()
+        else:
+            return self.__repr__()
 
     def _repr_tty_(self) -> str:
         """Return a summary of this sample sheet in a TTY compatible codec."""
