@@ -18,6 +18,7 @@ from unittest import TestCase
 from requests.exceptions import HTTPError
 
 from sample_sheet import *  # Test import of __all__
+from sample_sheet import HAS_TERMINALTABLES
 
 RESOURCES = Path(__file__).absolute().resolve().parent / 'resources'
 
@@ -717,6 +718,11 @@ class TestSampleSheet(TestCase):
             'SampleSheet(\'{}\')'.format(infile),
         )
 
+    @pytest.mark.xfail(reasion="Not sure if multi-line diff is correct")
+    @pytest.mark.skipif(
+        not HAS_TERMINALTABLES,
+        reason="We need `terminaltables` installed here",
+    )
     def test_repr_tty(self):
         """Test ``_repr_tty_()``"""
         self.maxDiff = 3000
@@ -763,4 +769,4 @@ class TestSampleSheet(TestCase):
             '\n└───────────┴──────────────────┘'
         )
 
-        # self.assertMultiLineEqual(source, target)
+        self.assertMultiLineEqual(source, target)
