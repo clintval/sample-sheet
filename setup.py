@@ -35,7 +35,7 @@ setuptools.setup(
         'Programming Language :: Python :: 3.7',
     ],
     project_urls={
-        'Documentation': 'https://sample-sheet.readthedocs.com',
+        'Documentation': 'https://sample-sheet.readthedocs.io',
         'Issue-Tracker': 'https://github.com/clintval/sample-sheet/issues',
     },
 )
