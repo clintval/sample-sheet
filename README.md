@@ -9,7 +9,7 @@
 [![MyPy Checked](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
-A permissively licensed library to replace [Illumina's Experiment Manager](https://support.illumina.com/sequencing/sequencing_software/experiment_manager.html).
+A permissively licensed library designed to replace [Illumina's Experiment Manager](https://support.illumina.com/sequencing/sequencing_software/experiment_manager.html).
 
 ```bash
 ❯ pip install sample_sheet
