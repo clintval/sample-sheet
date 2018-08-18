@@ -438,7 +438,7 @@ class SampleSheet(object):
         interpreter, then print out a nicely formatted ASCII table.
 
         Returns:
-            markdown: A visual table of IDs and names for all samples.
+            Markdown, str: A visual table of IDs and names for all samples.
 
         """
         if not self.samples:
@@ -684,7 +684,7 @@ class SampleSheet(object):
         """Write this :class:`SampleSheet` to JSON.
 
         Returns:
-            content: The JSON dump of all entries in this sample sheet.
+            str: The JSON dump of all entries in this sample sheet.
 
         """
         content = {
