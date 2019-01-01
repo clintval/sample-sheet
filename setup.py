@@ -16,7 +16,12 @@ setuptools.setup(
     license='MIT',
     zip_safe=True,
     packages=find_packages(),
-    install_requires=['click', 'smart_open>=1.5.4', 'tabulate', 'terminaltables'],
+    install_requires=[
+        'click',
+        'smart_open>=1.5.4',
+        'tabulate',
+        'terminaltables',
+    ],
     scripts=['scripts/sample-sheet'],
     keywords='illumina samplesheet sample sheet parser bioinformatics',
     classifiers=[
