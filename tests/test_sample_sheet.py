@@ -18,7 +18,6 @@ from unittest import TestCase
 from requests.exceptions import HTTPError
 
 from sample_sheet import *  # Test import of __all__
-from sample_sheet import HAS_TERMINALTABLES
 
 RESOURCES = Path(__file__).absolute().resolve().parent / 'resources'
 
@@ -128,6 +127,13 @@ class TestSampleSheet(TestCase):
 
         eq_(len(sample_sheet.samples), 2)
         eq_(sample_sheet.samples[0], sample1)
+
+    def test_add_sample_without_sample_id(self):
+        """Test adding a sample without a sample ID"""
+        sample = Sample()
+        sample_sheet = SampleSheet()
+        with pytest.raises(ValueError):
+            sample_sheet.add_sample(sample)
 
     def test_add_sample_with_index(self):
         """Test that the SampleSheet sets a sample with attribute ``index``"""
@@ -718,11 +724,6 @@ class TestSampleSheet(TestCase):
             'SampleSheet(\'{}\')'.format(infile),
         )
 
-    @pytest.mark.xfail(reasion="Not sure if multi-line diff is correct")
-    @pytest.mark.skipif(
-        not HAS_TERMINALTABLES,
-        reason="We need `terminaltables` installed here",
-    )
     def test_repr_tty(self):
         """Test ``_repr_tty_()``"""
         self.maxDiff = 3000
@@ -730,9 +731,9 @@ class TestSampleSheet(TestCase):
         source = '\n' + ''.join(decode_vt_100(sample_sheet._repr_tty_()))
         target = (
             '\n┌Header─────────────┬─────────────────────────────────┐'
-            '\n│ IEM1_File_Version │ 4                               │'
-            '\n│ Investigator_Name │ jdoe                            │'
-            '\n│ Experiment_Name   │ exp001                          │'
+            '\n│ IEM1FileVersion   │ 4                               │'
+            '\n│ Investigator Name │ jdoe                            │'
+            '\n│ Experiment Name   │ exp001                          │'
             '\n│ Date              │ 11/16/2017                      │'
             '\n│ Workflow          │ SureSelectXT                    │'
             '\n│ Application       │ NextSeq FASTQ Only              │'
@@ -740,11 +741,11 @@ class TestSampleSheet(TestCase):
             '\n│ Description       │ A description of this flow cell │'
             '\n│ Chemistry         │ Default                         │'
             '\n└───────────────────┴─────────────────────────────────┘'
-            '\n┌Settings──────────────────────┬──────────┐'
-            '\n│ create_fastq_for_index_reads │ 1        │'
-            '\n│ barcode_mismatches           │ 2        │'
-            '\n│ reads                        │ 151, 151 │'
-            '\n└──────────────────────────────┴──────────┘'
+            '\n┌Settings──────────────────┬──────────┐'
+            '\n│ CreateFastqForIndexReads │ 1        │'
+            '\n│ BarcodeMismatches        │ 2        │'
+            '\n│ Reads                    │ 151, 151 │'
+            '\n└──────────────────────────┴──────────┘'
             '\n┌Identifiers┬──────────────┬────────────┬──────────┬────────┐'
             '\n│ Sample_ID │ Sample_Name  │ Library_ID │ index    │ index2 │'
             '\n├───────────┼──────────────┼────────────┼──────────┼────────┤'
