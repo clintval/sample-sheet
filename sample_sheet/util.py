@@ -1,7 +1,7 @@
 # pylint: disable=E0401
-from typing import Any, List
+from typing import Any
 
-__all__: List[str] = ['is_ipython_interpreter', 'maybe_render_markdown']
+__all__ = ['is_ipython_interpreter', 'maybe_render_markdown']
 
 
 def is_ipython_interpreter() -> bool:  # pragma: no cover
