@@ -4,6 +4,7 @@
 [![Documentation Build Status](https://readthedocs.org/projects/sample-sheet/badge/?version=latest)](https://sample-sheet.readthedocs.io/en/latest/?badge=latest)
 [![Code Coverage](https://codecov.io/gh/clintval/sample-sheet/branch/master/graph/badge.svg)](https://codecov.io/gh/clintval/sample-sheet)
 [![PyPi Release](https://badge.fury.io/py/sample_sheet.svg)](https://badge.fury.io/py/sample_sheet)
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square)](http://bioconda.github.io/recipes/sample-sheet/README.html)
 [![License](https://img.shields.io/pypi/l/sample-sheet.svg)](https://github.com/clintval/sample-sheet/blob/master/LICENSE)
 [![Python Versions](https://img.shields.io/pypi/pyversions/sample-sheet.svg)](https://pypi.python.org/pypi/sample-sheet/)
 [![MyPy Checked](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
@@ -12,7 +13,13 @@
 A permissively licensed library designed to replace [Illumina's Experiment Manager](https://support.illumina.com/sequencing/sequencing_software/experiment_manager.html).
 
 ```bash
-❯ pip install sample_sheet
+❯ pip install sample-sheet
+```
+
+Or install with the Conda package manager:
+
+```bash
+❯ conda install -c bioconda sample-sheet
 ```
 
 Features:
