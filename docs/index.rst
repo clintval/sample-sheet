@@ -5,7 +5,13 @@ A permissively licensed library designed to replace `Illumina's Experiment Manag
 
 .. code-block:: bash
 
-    ❯ pip install sample_sheet
+    ❯ pip install sample-sheet
+
+Or install with the Conda package manager:
+
+.. code-block:: bash
+
+    ❯ conda install -c bioconda sample-sheet
 
 Features
 --------
