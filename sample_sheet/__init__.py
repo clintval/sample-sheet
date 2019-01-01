@@ -494,7 +494,7 @@ class SampleSheet(object):
                 )
 
             header_match = self._section_header_re.match(line[0])
-    
+
             # If we enter a section save it's name and continue to next line.
             if header_match:
                 section_name, *_ = header_match.groups()
