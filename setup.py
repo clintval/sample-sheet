@@ -18,6 +18,7 @@ setuptools.setup(
     packages=find_packages(),
     install_requires=[
         'click',
+        'requests',
         'smart_open>=1.5.4',
         'tabulate',
         'terminaltables',
