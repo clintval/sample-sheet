@@ -10,10 +10,6 @@ from itertools import chain, repeat, islice
 from pathlib import Path
 from string import ascii_letters, digits, punctuation
 from textwrap import wrap
-
-from requests.structures import CaseInsensitiveDict
-from smart_open import smart_open  # type: ignore
-from tabulate import tabulate  # type: ignore
 from typing import (
     Any,
     Generator,
@@ -26,20 +22,16 @@ from typing import (
     Union,
 )
 
+from requests.structures import CaseInsensitiveDict
+from smart_open import smart_open  # type: ignore
+from tabulate import tabulate  # type: ignore
+from terminaltables import SingleTable
+
 from .util import maybe_render_markdown
 
 __all__: List[str] = ['ReadStructure', 'Sample', 'SampleSheet']
 
 __version__ = '0.8.0'
-
-
-try:  # pragma: no cover
-    from terminaltables import SingleTable  # type: ignore
-
-    HAS_TERMINALTABLES = True
-except ImportError:
-    HAS_TERMINALTABLES = False
-
 
 DESIGN_HEADER: List[str] = [
     'Sample_ID',
@@ -502,7 +494,7 @@ class SampleSheet(object):
                 )
 
             header_match = self._section_header_re.match(line[0])
-
+    
             # If we enter a section save it's name and continue to next line.
             if header_match:
                 section_name, *_ = header_match.groups()
@@ -941,7 +933,7 @@ class SampleSheet(object):
         except OSError:  # pragma: no cover
             in_terminal = False
 
-        if in_terminal and HAS_TERMINALTABLES:
+        if in_terminal:  # pragma: no cover
             return self._repr_tty_()
         else:
             return self.__repr__()

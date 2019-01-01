@@ -18,7 +18,6 @@ from unittest import TestCase
 from requests.exceptions import HTTPError
 
 from sample_sheet import *  # Test import of __all__
-from sample_sheet import HAS_TERMINALTABLES
 
 RESOURCES = Path(__file__).absolute().resolve().parent / 'resources'
 
@@ -128,6 +127,13 @@ class TestSampleSheet(TestCase):
 
         eq_(len(sample_sheet.samples), 2)
         eq_(sample_sheet.samples[0], sample1)
+
+    def test_add_sample_without_sample_id(self):
+        """Test adding a sample without a sample ID"""
+        sample = Sample()
+        sample_sheet = SampleSheet()
+        with pytest.raises(ValueError):
+            sample_sheet.add_sample(sample)
 
     def test_add_sample_with_index(self):
         """Test that the SampleSheet sets a sample with attribute ``index``"""
@@ -718,10 +724,6 @@ class TestSampleSheet(TestCase):
             'SampleSheet(\'{}\')'.format(infile),
         )
 
-    @pytest.mark.skipif(
-        not HAS_TERMINALTABLES,
-        reason="We need `terminaltables` installed here",
-    )
     def test_repr_tty(self):
         """Test ``_repr_tty_()``"""
         self.maxDiff = 3000
