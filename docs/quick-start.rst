@@ -1,8 +1,8 @@
 Quick Start
 ===========
 
-To demonstrate the features of this library we will use a test file
-available at this remote location:
+To demonstrate the features of this library we will use a test file at an HTTPS endpoint.
+To follow along, ensure you have the `smart_open` library installed!
 
 .. code-block:: python
 
