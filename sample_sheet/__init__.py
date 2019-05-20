@@ -1,4 +1,5 @@
 import csv
+import importlib
 import json
 import os
 import re
@@ -23,7 +24,11 @@ from typing import (
 )
 
 from requests.structures import CaseInsensitiveDict
-from smart_open import smart_open  # type: ignore
+
+try:
+    from smart_open import smart_open as open  # type: ignore
+except ImportError:
+    pass
 from tabulate import tabulate  # type: ignore
 from terminaltables import SingleTable
 
@@ -384,7 +389,7 @@ class SampleSheet(object):
 
     Args:
         path:  Any path supported by :class:`pathlib.Path` and/or
-            :class:`smart_open.smart_open`.
+            :class:`smart_open.smart_open` when `smart_open` is installed.
 
     """
 
@@ -471,7 +476,7 @@ class SampleSheet(object):
         section_name: str = ''
         sample_header: Optional[List[str]] = None
 
-        with smart_open(path, encoding=self._encoding) as handle:
+        with open(path, encoding=self._encoding) as handle:
             lines = list(csv.reader(handle, skipinitialspace=True))
 
         for i, line in enumerate(lines):
