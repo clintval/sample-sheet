@@ -9,21 +9,14 @@ if sys.version_info < (3, 6):
     sys.exit(f'Python < 3.6 will not be supported.')
 
 
-def this_version() -> str:
-    """Read the variable `__version__` from the module itself."""
-    contents = Path('sample_sheet/_version.py').read_text()
-    *_, version = contents.strip().split()
-    return version
-
-
 setuptools.setup(
     name='sample-sheet',
-    version=this_version(),
+    version='0.9.0',
     author='clintval',
     author_email='valentine.clint@gmail.com',
     description='An Illumina Sample Sheet parsing library',
     url='https://github.com/clintval/sample-sheet',
-    download_url=f'https://github.com/sample-sheet/archive/v{this_version()}.tar.gz',
+    download_url=f'https://github.com/sample-sheet/archive/v0.9.0.tar.gz',
     long_description=Path('README.md').read_text(),
     long_description_content_type='text/markdown',
     license='MIT',
