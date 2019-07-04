@@ -7,7 +7,7 @@ A permissively licensed library designed to replace `Illumina's Experiment Manag
 
     ❯ pip install sample-sheet
 
-Or install with the Conda package manager after setting up your [Bioconda channels](https://bioconda.github.io/user/install.html#set-up-channels):
+Or install with the Conda package manager after setting up your `Bioconda channels <https://bioconda.github.io/user/install.html#set-up-channels>`_:
 
 .. code-block:: bash
 
