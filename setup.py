@@ -20,7 +20,7 @@ setuptools.setup(
     author_email='valentine.clint@gmail.com',
     description='An Illumina Sample Sheet parsing library',
     url='https://github.com/clintval/sample-sheet',
-    download_url=f'https://github.com/clintval/sample-sheet/archive/v0.9.1.tar.gz',
+    download_url=f'https://github.com/clintval/sample-sheet/archive/0.9.1.tar.gz',
     long_description=long_description,
     long_description_content_type='text/markdown',
     license='MIT',
