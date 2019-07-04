@@ -1,23 +1,27 @@
 import setuptools
 import sys
 
-from pathlib import Path
-
-PACKAGE: str = 'sample_sheet'
+from os import path
 
 if sys.version_info < (3, 6):
     sys.exit(f'Python < 3.6 will not be supported.')
 
+this_directory = path.abspath(path.dirname(__file__))
+
+with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
+
+PACKAGE: str = 'sample_sheet'
 
 setuptools.setup(
     name='sample-sheet',
-    version='0.9.0',
+    version='0.9.1',
     author='clintval',
     author_email='valentine.clint@gmail.com',
     description='An Illumina Sample Sheet parsing library',
     url='https://github.com/clintval/sample-sheet',
-    download_url=f'https://github.com/sample-sheet/archive/v0.9.0.tar.gz',
-    long_description=Path('README.md').read_text(),
+    download_url=f'https://github.com/clintval/sample-sheet/archive/v0.9.1.tar.gz',
+    long_description=long_description,
     long_description_content_type='text/markdown',
     license='MIT',
     zip_safe=True,

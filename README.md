@@ -15,10 +15,16 @@ A permissively licensed library designed to replace [Illumina's Experiment Manag
 ❯ pip install sample-sheet
 ```
 
-Or install with the Conda package manager:
+Or install with the Conda package manager after setting up your [Bioconda channels](https://bioconda.github.io/user/install.html#set-up-channels):
 
 ```bash
-❯ conda install -c bioconda sample-sheet
+❯ conda install sample-sheet
+```
+
+Which should be equivalent to:
+
+```bash
+❯ conda install -c bioconda -c conda-forge -c defaults sample-sheet
 ```
 
 Features:
