@@ -16,19 +16,20 @@ List all environments with:
 using tox.ini: .../sample-sheet/tox.ini
 using tox-3.1.2 from ../tox/__init__.py
 default environments:
-py36      -> run the test suite with (basepython)
-py36-lint -> check the code style
-py36-type -> type check the library
-py36-docs -> test building of HTML docs
+py36 -> run the test suite with (basepython)
+py37 -> run the test suite with (basepython)
+lint -> check the code style
+type -> type check the library
+docs -> test building of HTML docs
 
 additional environments:
-dev       -> the official sample_sheet development environment
+dev  -> the official sample_sheet development environment
 ```
 
 To run just one environment:
 
 ```bash
-❯ tox -e py36
+❯ tox -e lint
 ```
 
 To pass in positional arguments to a specified environment:
