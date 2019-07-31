@@ -38,8 +38,6 @@ from .util import maybe_render_markdown
 
 __all__: List[str] = ['ReadStructure', 'Sample', 'SampleSheet']
 
-__version__ = '0.8.0'
-
 DESIGN_HEADER: List[str] = [
     'Sample_ID',
     'Sample_Name',
