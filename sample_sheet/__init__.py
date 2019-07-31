@@ -26,6 +26,8 @@ from typing import (
 from requests.structures import CaseInsensitiveDict
 
 try:
+    from smart_open import open  # Migration for smart_open 1.8.1 # type: ignore
+except ImportError:
     from smart_open import smart_open as open  # type: ignore
 except ImportError:
     pass
