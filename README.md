@@ -3,7 +3,7 @@
 [![Testing Status](https://travis-ci.org/clintval/sample-sheet.svg?branch=master)](https://travis-ci.org/clintval/sample-sheet)
 [![Documentation Build Status](https://readthedocs.org/projects/sample-sheet/badge/?version=latest)](https://sample-sheet.readthedocs.io/en/latest/?badge=latest)
 [![Code Coverage](https://codecov.io/gh/clintval/sample-sheet/branch/master/graph/badge.svg)](https://codecov.io/gh/clintval/sample-sheet)
-[![PyPi Release](https://badge.fury.io/py/sample_sheet.svg)](https://badge.fury.io/py/sample_sheet)
+[![PyPI Release](https://badge.fury.io/py/sample-sheet.svg)](https://badge.fury.io/py/sample-sheet)
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg)](http://bioconda.github.io/recipes/sample-sheet/README.html)
 [![Python Versions](https://img.shields.io/pypi/pyversions/sample-sheet.svg)](https://pypi.python.org/pypi/sample-sheet/)
 [![MyPy Checked](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
