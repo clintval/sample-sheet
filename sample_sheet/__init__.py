@@ -25,15 +25,16 @@ from typing import (
 
 from requests.structures import CaseInsensitiveDict
 
-try:
-    from smart_open import (
-        open,
-    )  # Migration for smart_open 1.8.1 # type: ignore
-except ImportError:
-    from smart_open import smart_open as open  # type: ignore
-except ImportError:
-    pass
-from tabulate import tabulate  # type: ignore
+try:  # pragma: no cover
+    # This import works for smart_open>=1.8.1
+    from smart_open import open
+except ImportError as error:  # pragma: no cover
+    try:
+        # This import works for smart_open<1.8.1
+        from smart_open import smart_open as open
+    except ImportError as error:
+        pass
+from tabulate import tabulate
 from terminaltables import SingleTable
 
 from .util import maybe_render_markdown
