@@ -272,7 +272,7 @@ class Sample(CaseInsensitiveDict):
     """
 
     _valid_index_key_pattern = re.compile(r'index\d?')
-    _valid_index_value_pattern = re.compile(r'^[ACGTN]*|SI-GA-F8$')
+    _valid_index_value_pattern = re.compile(r'^[ACGTN]*|SI-GA-[A-H\d+]$')
 
     def __init__(
         self, data: Optional[Mapping] = None, **kwargs: Mapping
