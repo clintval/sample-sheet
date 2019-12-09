@@ -55,6 +55,7 @@ class TestSample(TestCase):
     def test_valid_index(self):
         """Test "index" and "index2" value validation."""
         eq_(Sample({'index': 'ACGTN'}).index, 'ACGTN')
+        eq_(Sample({'index': 'SI-GA-H1'}).index, 'SI-GA-H1')
         assert_raises(ValueError, Sample, {'index': 'ACUGTN'})
         assert_raises(ValueError, Sample, {'index2': 'ACUGTN'})
 
