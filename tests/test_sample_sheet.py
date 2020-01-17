@@ -331,13 +331,14 @@ class TestSampleSheet(TestCase):
             '[Header]\n'
             'IEMFileVersion,4\n'
             'Description\n'
+            'Chemistry,Default\n'
             '[Settings]\n'
             '\n'
             '[Reads]\n'
             '\n'
             '[Data]\n'
-            'Sample_ID, Description,\n'
-            'test2, Sample Description, New Field\n'
+            'Sample_ID, Description\n'
+            'test2, Sample Description\n'
         )        
         SampleSheet(filename)
 

@@ -534,8 +534,9 @@ class SampleSheet(object):
 
             # [<Other>] - keys in first column and values in second column.
             else:
+                #key, value, *_ = line
                 if len(line) >= 2:
-                    key, value = line
+                    key, value = (line[0], line[1])
                     section: Section = getattr(self, section_name)
                     section[key] = value
                 continue
