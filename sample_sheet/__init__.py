@@ -534,9 +534,10 @@ class SampleSheet(object):
 
             # [<Other>] - keys in first column and values in second column.
             else:
-                key, value, *_ = line
-                section: Section = getattr(self, section_name)
-                section[key] = value
+                if len(line) >= 2:
+                    key, value = line
+                    section: Section = getattr(self, section_name)
+                    section[key] = value
                 continue
 
     def add_sample(self, sample: Sample) -> None:
