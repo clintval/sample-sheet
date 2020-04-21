@@ -533,11 +533,10 @@ class SampleSheet(object):
                 continue
 
             # [<Other>] - keys in first column and values in second column.
-            else:
-                key, value, *_ = line
+            elif len(line) >= 2:
+                key, value = (line[0], line[1])
                 section: Section = getattr(self, section_name)
                 section[key] = value
-                continue
 
     def add_sample(self, sample: Sample) -> None:
         """Add a :class:`Sample` to this :class:`SampleSheet`.

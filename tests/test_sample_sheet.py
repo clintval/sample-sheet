@@ -325,6 +325,29 @@ class TestSampleSheet(TestCase):
 
         assert_raises(ValueError, SampleSheet, filename)
 
+    def test_parse_limited_commas(self):
+        """Test minimium required commas"""
+        filename = string_as_temporary_file(
+            '[Header]\n'
+            'IEMFileVersion,4\n'
+            'Description\n'
+            'Chemistry,Default\n'
+            '[Settings]\n'
+            '\n'
+            '[Reads]\n'
+            '\n'
+            '[Data]\n'
+            'Sample_ID, Description\n'
+            'test2, Sample Description\n'
+        )        
+        sample_sheet = SampleSheet(filename)
+        eq_(sample_sheet.Header, {'IEMFileVersion': '4',
+                                  'Chemistry': 'Default'})
+
+        eq_(len(sample_sheet.samples), 1)
+        eq_(sample_sheet.samples[0], Sample({'Sample_ID': 'test2',
+                                             'Description': 'Sample Description'}))
+
     def test_experiment_design_plain_text(self):
         """Test ``experimental_design()`` plain text output"""
         sample_sheet = SampleSheet()
