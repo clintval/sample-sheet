@@ -273,7 +273,7 @@ class Sample(CaseInsensitiveDict):
 
     _valid_index_key_pattern = re.compile(r'index\d?')
     # https://kb.10xgenomics.com/hc/en-us/articles/218168503-What-oligos-are-in-my-sample-index-
-    _valid_index_value_pattern = re.compile(r'^[ACGTN]*$|^SI-[GN]A-[A-H]\d+$')
+    _valid_index_value_pattern = re.compile(r'^[ACGTN]*$|^SI-[ACGTN]{2}-[A-H]\d+$')
 
     def __init__(
         self, data: Optional[Mapping] = None, **kwargs: Mapping
