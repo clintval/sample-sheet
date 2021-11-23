@@ -6,6 +6,9 @@ import re
 import sys
 import warnings
 
+# special character import from special_character file
+from docs.special_characters import special_characters
+
 from contextlib import ExitStack
 from itertools import chain, repeat, islice
 from pathlib import Path
@@ -60,7 +63,7 @@ MIN_WIDTH: int = 10
 # https://www.illumina.com/content/dam/illumina-marketing/
 #     documents/products/technotes/
 #     sequencing-sheet-format-specifications-technical-note-970-2017-004.pdf
-VALID_ASCII: Set[str] = set(ascii_letters + digits + punctuation + ' \n\r')
+VALID_ASCII: Set[str] = set(ascii_letters + digits + punctuation + ' \n\r' + special_characters)
 
 
 class ReadStructure(object):
@@ -397,7 +400,7 @@ class SampleSheet(object):
 
     """
 
-    _encoding: str = 'utf8'
+    _encoding: str = 'ISO-8859-1'
     _section_header_re = re.compile(r'\[(.*)\]')
     _whitespace_re = re.compile(r'\s+')
 
@@ -482,7 +485,8 @@ class SampleSheet(object):
 
         with open(path, encoding=self._encoding) as handle:
             lines = list(csv.reader(handle, skipinitialspace=True))
-
+        
+        specChrLineNum = []
         for i, line in enumerate(lines):
             # Skip to next line if this line is empty to support formats of
             # sample sheets with multiple newlines as section seperators.
@@ -497,46 +501,70 @@ class SampleSheet(object):
                 character not in VALID_ASCII
                 for character in set(''.join(line))
             ):
-                raise ValueError(
-                    f'Sample sheet contains invalid characters on line '
-                    f'{i + 1}: {"".join(line)}'
-                )
+                specChrLineNum.append(f'{i+1}')
+        
+        if len(specChrLineNum) != 0 :
+            raise ValueError(
+                f'Sample sheet contains invalid characters on line '
+                f'{(", ").join(specChrLineNum)}'
+            )
+        else:    
 
-            header_match = self._section_header_re.match(line[0])
+            for i, line in enumerate(lines):
+                # Skip to next line if this line is empty to support formats of
+                # sample sheets with multiple newlines as section seperators.
+                #
+                #   https://github.com/clintval/sample-sheet/issues/46
+                #
+                if not ''.join(line).strip():
+                    continue
 
-            # If we enter a section save it's name and continue to next line.
-            if header_match:
-                section_name, *_ = header_match.groups()
-                if (
-                    section_name not in self._sections
-                    and section_name not in REQUIRED_SECTIONS
+                # Raise exception if we encounter invalid characters.
+                if any(
+                    character not in VALID_ASCII
+                    for character in set(''.join(line))
                 ):
-                    self.add_section(section_name)
-                continue
-
-            # [Reads] - vertical list of integers.
-            if section_name == 'Reads':
-                self.Reads.append(int(line[0]))
-                continue
-
-            # [Data] - delimited data with the first line a header.
-            elif section_name == 'Data':
-                if sample_header is not None:
-                    self.add_sample(Sample(dict(zip(sample_header, line))))
-                elif any(key == '' for key in line):
                     raise ValueError(
-                        f'Header for [Data] section is not allowed to '
-                        f'have empty fields: {line}'
+                        f'Sample sheet contains invalid characters on line '
+                        f'{i + 1}: {"".join(line)}'
                     )
-                else:
-                    sample_header = line
-                continue
 
-            # [<Other>] - keys in first column and values in second column.
-            elif len(line) >= 2:
-                key, value = (line[0], line[1])
-                section: Section = getattr(self, section_name)
-                section[key] = value
+                
+                header_match = self._section_header_re.match(line[0])
+
+                # If we enter a section save it's name and continue to next line.
+                if header_match:
+                    section_name, *_ = header_match.groups()
+                    if (
+                        section_name not in self._sections
+                        and section_name not in REQUIRED_SECTIONS
+                    ):
+                        self.add_section(section_name)
+                    continue
+
+                # [Reads] - vertical list of integers.
+                if section_name == 'Reads':
+                    self.Reads.append(int(line[0]))
+                    continue
+
+                # [Data] - delimited data with the first line a header.
+                elif section_name == 'Data':
+                    if sample_header is not None:
+                        self.add_sample(Sample(dict(zip(sample_header, line))))
+                    elif any(key == '' for key in line):
+                        raise ValueError(
+                            f'Header for [Data] section is not allowed to '
+                            f'have empty fields: {line}'
+                        )
+                    else:
+                        sample_header = line
+                    continue
+
+                # [<Other>] - keys in first column and values in second column.
+                elif len(line) >= 2:
+                    key, value = (line[0], line[1])
+                    section: Section = getattr(self, section_name)
+                    section[key] = value
 
     def add_sample(self, sample: Sample) -> None:
         """Add a :class:`Sample` to this :class:`SampleSheet`.
@@ -702,7 +730,7 @@ class SampleSheet(object):
             'Data': [sample.to_json() for sample in self.samples],
             **{title: dict(getattr(self, title)) for title in self._sections},
         }
-        return json.dumps(content, **kwargs)  # type: ignore
+        return json.dumps(content, **kwargs), content  # type: ignore
 
     def to_picard_basecalling_params(
         self,
