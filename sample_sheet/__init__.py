@@ -401,7 +401,7 @@ class SampleSheet(object):
     _section_header_re = re.compile(r'\[(.*)\]')
     _whitespace_re = re.compile(r'\s+')
 
-    def __init__(self, path: Optional[Union[Path, str]] = None) -> None:
+    def __init__(self, path: Optional[Union[Path, str, TextIO]] = None) -> None:
         self.path = path
 
         self._samples: List[Sample] = []
@@ -415,7 +415,12 @@ class SampleSheet(object):
         self.Header: Section = Section()
         self.Settings: Section = Section()
 
-        if self.path:
+
+        if self.path is not None:
+          if isinstance(self.path, (str, Path)):
+            with open(self.path, 'r') as f:
+              self._parse(f)
+          else:
             self._parse(self.path)
 
     def add_section(self, section_name: str) -> None:
@@ -476,12 +481,11 @@ class SampleSheet(object):
         """Return the samples present in this :class:`SampleSheet`."""
         return self._samples
 
-    def _parse(self, path: Union[Path, str]) -> None:
+    def _parse(self, handle: TextIO) -> None:
         section_name: str = ''
         sample_header: Optional[List[str]] = None
 
-        with open(path, encoding=self._encoding) as handle:
-            lines = list(csv.reader(handle, skipinitialspace=True))
+        lines = list(csv.reader(handle, skipinitialspace=True))
 
         for i, line in enumerate(lines):
             # Skip to next line if this line is empty to support formats of
