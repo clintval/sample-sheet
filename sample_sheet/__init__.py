@@ -418,7 +418,7 @@ class SampleSheet(object):
 
         if self.path is not None:
           if isinstance(self.path, (str, Path)):
-            with open(self.path, 'r') as f:
+            with open(self.path, 'rU') as f:
               self._parse(f)
           else:
             self._parse(self.path)
