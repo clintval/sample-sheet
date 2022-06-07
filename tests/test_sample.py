@@ -58,6 +58,7 @@ class TestSample(TestCase):
         eq_(Sample({'index': 'SI-GA-H1'}).index, 'SI-GA-H1')
         eq_(Sample({'index': 'SI-NA-A8'}).index, 'SI-NA-A8')
         eq_(Sample({'index': 'SI-TT-A1'}).index, 'SI-TT-A1')
+        eq_(Sample({'index': 'SI-TS-A1'}).index, 'SI-TS-A1')
         assert_raises(ValueError, Sample, {'index': 'ACUGTN'})
         assert_raises(ValueError, Sample, {'index2': 'ACUGTN'})
 
