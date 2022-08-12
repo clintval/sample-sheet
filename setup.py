@@ -15,12 +15,12 @@ PACKAGE: str = 'sample_sheet'
 
 setuptools.setup(
     name='sample-sheet',
-    version='0.12.0',
+    version='0.13.0',
     author='clintval',
     author_email='valentine.clint@gmail.com',
     description='An Illumina Sample Sheet parsing library',
     url='https://github.com/clintval/sample-sheet',
-    download_url=f'https://github.com/clintval/sample-sheet/archive/0.12.0.tar.gz',
+    download_url=f'https://github.com/clintval/sample-sheet/archive/0.13.0.tar.gz',
     long_description=long_description,
     long_description_content_type='text/markdown',
     license='MIT',
