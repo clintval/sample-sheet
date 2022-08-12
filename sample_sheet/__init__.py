@@ -120,7 +120,7 @@ class ReadStructure(object):
 
     def __init__(self, structure: str) -> None:
         if not bool(self._valid_pattern.match(structure)):
-            raise ValueError(f'Not a valid read structure: "{structure}"')
+            warnings.warn(f'Not a valid read structure: "{structure}"')
         self.structure = structure
 
     def _sum_cycles_from_tokens(self, tokens: List[str]) -> int:
@@ -294,7 +294,7 @@ class Sample(CaseInsensitiveDict):
             if self._valid_index_key_pattern.match(key) and not bool(
                 self._valid_index_value_pattern.match(str(value))
             ):
-                raise ValueError(f'Not a valid index: {value}')
+                warnings.warn(f'Not a valid index: {value}')
 
             self[key] = value
         if (
@@ -302,7 +302,7 @@ class Sample(CaseInsensitiveDict):
             and self.Read_Structure.is_single_indexed
             and self.index is None
         ):
-            raise ValueError(
+            warnings.warn(
                 f'If a single-indexed read structure is defined then a '
                 f'sample `index` must be defined also: {self}'
             )
@@ -312,7 +312,7 @@ class Sample(CaseInsensitiveDict):
             and self.index is None
             and self.index2 is None
         ):
-            raise ValueError(
+            warnings.warn(
                 f'If a dual-indexed read structure is defined then '
                 f'sample `index` and sample `index2` must be defined '
                 f'also: {self}'
@@ -418,7 +418,7 @@ class SampleSheet(object):
 
         if self.path is not None:
           if isinstance(self.path, (str, Path)):
-            with open(self.path, 'r') as f:
+            with open(self.path, 'rU') as f:
               self._parse(f)
           else:
             self._parse(self.path)
@@ -456,7 +456,7 @@ class SampleSheet(object):
 
         """
         if not self.samples:
-            raise ValueError('No samples in sample sheet')
+            warnings.warn('No samples in sample sheet')
 
         markdown = tabulate(
             [[getattr(s, h, '') for h in DESIGN_HEADER] for s in self.samples],
@@ -497,14 +497,14 @@ class SampleSheet(object):
                 continue
 
             # Raise exception if we encounter invalid characters.
-            if any(
-                character not in VALID_ASCII
-                for character in set(''.join(line))
-            ):
-                raise ValueError(
-                    f'Sample sheet contains invalid characters on line '
-                    f'{i + 1}: {"".join(line)}'
-                )
+            # if any(
+            #     character not in VALID_ASCII
+            #     for character in set(''.join(line))
+            # ):
+            #     warnings.warn(
+            #         f'Sample sheet contains invalid characters on line '
+            #         f'{i + 1}: {"".join(line)}'
+            #     )
 
             header_match = self._section_header_re.match(line[0])
 
@@ -527,11 +527,11 @@ class SampleSheet(object):
             elif section_name == 'Data':
                 if sample_header is not None:
                     self.add_sample(Sample(dict(zip(sample_header, line))))
-                elif any(key == '' for key in line):
-                    raise ValueError(
-                        f'Header for [Data] section is not allowed to '
-                        f'have empty fields: {line}'
-                    )
+                # elif any(key == '' for key in line):
+                #     warnings.warn(
+                #         f'Header for [Data] section is not allowed to '
+                #         f'have empty fields: {line}'
+                #     )
                 else:
                     sample_header = line
                 continue
@@ -584,7 +584,7 @@ class SampleSheet(object):
         """
         # Do not allow samples without Sample_ID defined.
         if sample.Sample_ID is None:
-            raise ValueError('Sample must have "Sample_ID" defined.')
+            warnings.warn('Sample must have "Sample_ID" defined.')
 
         # Set whether the samples will have ``index`` or ``index2``.
         if len(self.samples) == 0:
@@ -607,7 +607,7 @@ class SampleSheet(object):
                 or self.is_single_end  # noqa
                 and not sample.Read_Structure.is_single_end
             ):
-                raise ValueError(
+                warnings.warn(
                     f'Sample sheet pairing has been set with '
                     f'Reads:"{self.Reads}" and is not compatible with sample '
                     f'read structure: {sample.Read_Structure}'
@@ -619,7 +619,7 @@ class SampleSheet(object):
         # Validate this sample against the ``SampleSheet.Read_Structure``
         # attribute, which can be None, to ensure they are the same.
         if self.Read_Structure != sample.Read_Structure:
-            raise ValueError(
+            warnings.warn(
                 f'Sample read structure ({sample.Read_Structure}) different '
                 f'than read structure in samplesheet ({self.Read_Structure}).'
             )
@@ -637,12 +637,12 @@ class SampleSheet(object):
                 # TODO: Look into if this is truly illegal or not.
                 warnings.warn(UserWarning(message))
             if sample.index is None and self.samples_have_index:
-                raise ValueError(
+                warnings.warn(
                     f'Cannot add a sample without attribute `index` if a '
                     f'previous sample has `index` set: {sample})'
                 )
             if sample.index2 is None and self.samples_have_index2:
-                raise ValueError(
+                warnings.warn(
                     f'Cannot add a sample without attribute `index2` if a '
                     f'previous sample has `index2` set: {sample})'
                 )
@@ -655,7 +655,7 @@ class SampleSheet(object):
                 and sample.index2 == other.index2
                 and sample.Lane == other.Lane
             ):
-                raise ValueError(
+                warnings.warn(
                     f'Sample index combination for {sample} has already been '
                     f'added on this lane or flowcell: {other}'
                 )
@@ -667,7 +667,7 @@ class SampleSheet(object):
                 and sample.index == other.index
                 and sample.Lane == other.Lane
             ):
-                raise ValueError(
+                warnings.warn(
                     f'First sample index for {sample} has already been '
                     f'added on this lane or flowcell: {other}'
                 )
@@ -679,7 +679,7 @@ class SampleSheet(object):
                 and sample.index2 == other.index2
                 and sample.Lane == other.Lane
             ):
-                raise ValueError(
+                warnings.warn(
                     f'Second sample index for {sample} has already been '
                     f'added on this lane or flowcell: {other}'
                 )
@@ -748,21 +748,21 @@ class SampleSheet(object):
 
         """
         if len(self.samples) == 0:
-            raise ValueError('No samples in sample sheet')
+            warnings.warn('No samples in sample sheet')
         if not (
             isinstance(lanes, int)
             or isinstance(lanes, (list, tuple))
             and len(lanes) > 0
             and all(isinstance(lane, int) for lane in lanes)
         ):
-            raise ValueError(f'Lanes must be an int or list of ints: {lanes}')
+            warnings.warn(f'Lanes must be an int or list of ints: {lanes}')
         if len(set(len(sample.index or '') for sample in self.samples)) != 1:
-            raise ValueError('I7 indexes have differing lengths.')
+            warnings.warn('I7 indexes have differing lengths.')
         if len(set(len(sample.index2 or '') for sample in self.samples)) != 1:
-            raise ValueError('I5 indexes have differing lengths.')
+            warnings.warn('I5 indexes have differing lengths.')
         for attr in ('Sample_Name', 'Library_ID', 'index'):
             if any(getattr(sample, attr) is None for sample in self.samples):
-                raise ValueError(
+                warnings.warn(
                     'Samples must have at least `Sample_Name`, '
                     '`Sample_Library`, and `index` attributes'
                 )
@@ -883,7 +883,7 @@ class SampleSheet(object):
 
         """
         if not isinstance(blank_lines, int) or blank_lines <= 0:
-            raise ValueError('Number of blank lines must be a positive int.')
+            warnings.warn('Number of blank lines must be a positive int.')
 
         writer = csv.writer(handle)
         csv_width: int = max([len(self.all_sample_keys), 2])
