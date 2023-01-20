@@ -276,7 +276,7 @@ class Sample(CaseInsensitiveDict):
 
     _valid_index_key_pattern = re.compile(r'index\d?')
     # https://kb.10xgenomics.com/hc/en-us/articles/218168503-What-oligos-are-in-my-sample-index-
-    _valid_index_value_pattern = re.compile(r'^[ACGTN]*$|^SI-[ACGTN]{2}-[A-H]\d+$')
+    _valid_index_value_pattern = re.compile(r'^[ACGTN]*$|^SI-[ACGTNS]{2}-[A-H]\d+$')
 
     def __init__(
         self, data: Optional[Mapping] = None, **kwargs: Mapping
@@ -404,7 +404,7 @@ class SampleSheet(object):
     _section_header_re = re.compile(r'\[(.*)\]')
     _whitespace_re = re.compile(r'\s+')
 
-    def __init__(self, path: Optional[Union[Path, str]] = None) -> None:
+    def __init__(self, path: Optional[Union[Path, str, TextIO]] = None) -> None:
         self.path = path
 
         self._samples: List[Sample] = []
@@ -418,7 +418,12 @@ class SampleSheet(object):
         self.Header: Section = Section()
         self.Settings: Section = Section()
 
-        if self.path:
+
+        if self.path is not None:
+          if isinstance(self.path, (str, Path)):
+            with open(self.path, 'r') as f:
+              self._parse(f)
+          else:
             self._parse(self.path)
 
     def add_section(self, section_name: str) -> None:
@@ -479,7 +484,7 @@ class SampleSheet(object):
         """Return the samples present in this :class:`SampleSheet`."""
         return self._samples
 
-    def _parse(self, path: Union[Path, str]) -> None:
+    def _parse(self, handle: TextIO) -> None:
         section_name: str = ''
         sample_header: Optional[List[str]] = None
 
