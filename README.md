@@ -15,17 +15,11 @@ Parse Illumina sample sheets with Python.
 pip install sample-sheet
 ```
 
-Or install with the Conda package manager after setting up your [Bioconda channels](https://bioconda.github.io/user/install.html#set-up-channels):
-
 ```console
-conda install sample-sheet
+conda install -c bioconda sample-sheet
 ```
 
-Which should be equivalent to:
-
-```
-conda install -c bioconda -c conda-forge -c defaults sample-sheet
-```
+![Santa Ynez Valley, California](.github/img/cover.jpg)
 
 Features:
 
