@@ -11,20 +11,20 @@
 
 Parse Illumina sample sheets with Python.
 
-```bash
-❯ pip install sample-sheet
+```console
+pip install sample-sheet
 ```
 
 Or install with the Conda package manager after setting up your [Bioconda channels](https://bioconda.github.io/user/install.html#set-up-channels):
 
-```bash
-❯ conda install sample-sheet
+```console
+conda install sample-sheet
 ```
 
 Which should be equivalent to:
 
-```bash
-❯ conda install -c bioconda -c conda-forge -c defaults sample-sheet
+```
+conda install -c bioconda -c conda-forge -c defaults sample-sheet
 ```
 
 Features:
