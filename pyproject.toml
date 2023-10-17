@@ -1,18 +1,110 @@
-[tool.black]
-line-length = 79
-skip-string-normalization = true
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \venv
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
+[tool.poetry]
+name = "sample-sheet"
+version = "0.14.0"
+description = "Parse Illumina sample sheets with Python"
+license = "MIT"
+authors = ["Clint Valentine <valentine.clint@gmail.com>"]
+readme = "README.md"
+homepage = "https://sample-sheet.readthedocs.io"
+repository = "https://github.com/clintval/sample-sheet"
+documentation = "https://sample-sheet.readthedocs.io"
+keywords = ["illumina", "samplesheet", "bioinformatics"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+include = ["README.md", "LICENSE"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+caseless = "^0.4.0"
+#click = "*" TODO: Just use argparse. Keep this thing lightweight!
+smart_open = { version = "^1.5.4", optional = true }
+tabulate = { version = "*", optional = true }
+terminaltables = { version = "*", optional = true}
+
+[tool.poetry.extras]
+smart_open = ["smart_open"]
+pretty_print = ["tabulate", "terminaltables"]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.2"
+pytest-cov = "^2.7.1"
+pytest-doctestplus = "^0.3.0"
+pytest-mypy = "^0.10.3"
+pytest-parallel = "^0.0.9"
+pytest-ruff = "^0.1.1"
+
+[tool.poetry.group.docs.dependencies]
+recommonmark = "*"
+Sphinx = "*"
+sphinx_rtd_theme = "*"
+
+[tool.poetry.scripts]
+#sample-sheet = "scripts/sample-sheet"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/clintval/sample-sheet/issues"
+
+[tool.coverage.run]
+branch = true
+source = ["sample_sheet"]
+parallel = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+isolated_build = True
+envlist = py39,py310,py311,py312
+
+[gh-actions]
+python =
+    3.9: py39
+    3.10: py310
+    3.11: py311
+    3.12: py312
+
+[testenv]
+allowlist_externals = poetry
+commands =
+  poetry install -v
+  poetry run pytest docs/ sample-sheet/ tests/
+"""
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["docs", "sample-sheet", "tests"]
+addopts = [
+    "--cov",
+    "--doctest-modules",
+    "--doctest-continue-on-failure",
+    "--doctest-plus",
+    "--doctest-rst",
+    "--doctest-glob '*.rst'",
+    "--mypy",
+    "--ruff",
+]
+doctest_plus = "enabled"
+doctest_optionflags = ["NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL"]
+
+[tool.ruff]
+select = ["C901", "E", "F", "W", "Q"]
+line-length = 120
+
+# TODO: Figure out how to build docs in here
+# [testenv:docs]
+# description = test building of HTML docs
+# deps: -rdocs/docs-requirements.txt
+# commands = sphinx-build docs {toxworkdir}/docs/_build -a --color -W -bhtml {posargs}

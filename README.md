@@ -9,7 +9,7 @@
 [![MyPy Checked](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
-A permissively licensed library designed to replace [Illumina's Experiment Manager](https://support.illumina.com/sequencing/sequencing_software/experiment_manager.html).
+Parse Illumina sample sheets with Python.
 
 ```bash
 ❯ pip install sample-sheet
@@ -32,5 +32,6 @@ Features:
 - Roundtrip reading, editing, and writing of Sample Sheets
 - _de novo_ creation creation of Sample Sheets
 - Exporting Sample Sheets to JSON
+- Can programmatically replace [Illumina's Experiment Manager](https://support.illumina.com/sequencing/sequencing_software/experiment_manager.html).
 
 Read the documentation at: [sample-sheet.readthedocs.io](http://sample-sheet.readthedocs.io/)

@@ -23,7 +23,7 @@ from typing import (
     Union,
 )
 
-from requests.structures import CaseInsensitiveDict
+from caseless import CaselessDict
 
 try:  # pragma: no cover
     # This import works for smart_open>=1.8.1
@@ -34,8 +34,6 @@ except ImportError as error:  # pragma: no cover
         from smart_open import smart_open as open
     except ImportError as error:
         pass
-from tabulate import tabulate
-from terminaltables import SingleTable
 
 from .util import maybe_render_markdown
 
@@ -239,7 +237,7 @@ class ReadStructure(object):
         return self.structure
 
 
-class Sample(CaseInsensitiveDict):
+class Sample(CaselessDict):
     """A single sample for a sample sheet.
 
     This class is built with the keys and values in the ``"[Data]"`` section of
@@ -356,7 +354,7 @@ class Sample(CaseInsensitiveDict):
         return str(self.Sample_ID) if self.Sample_ID is not None else ''
 
 
-class Section(CaseInsensitiveDict):
+class Section(CaselessDict):
     """Case insensitive dictionary for retrieval, returns ``None`` as default.
 
     """
@@ -455,6 +453,8 @@ class SampleSheet(object):
             Markdown, str: A visual table of IDs and names for all samples.
 
         """
+        from tabulate import tabulate
+
         if not self.samples:
             raise ValueError('No samples in sample sheet')
 
@@ -952,6 +952,8 @@ class SampleSheet(object):
 
     def _repr_tty_(self) -> str:
         """Return a summary of this sample sheet in a TTY compatible codec."""
+        from terminaltables import SingleTable
+
         header_description = ['Sample_ID', 'Description']
         header_samples = [
             'Sample_ID',
