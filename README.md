@@ -15,10 +15,6 @@ Parse Illumina sample sheets with Python.
 pip install sample-sheet
 ```
 
-```console
-conda install -c bioconda sample-sheet
-```
-
 ![Santa Ynez Valley, California](.github/img/cover.jpg)
 
 Features:
