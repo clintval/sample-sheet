@@ -3,6 +3,10 @@ name: CI
 on:
   - push
 
+env:
+  PY_COLORS: "1"
+
+    
 jobs:
   TestAndLint:
     runs-on: ubuntu-latest

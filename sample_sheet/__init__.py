@@ -1,5 +1,4 @@
 import csv
-import importlib
 import json
 import os
 import re
@@ -28,27 +27,27 @@ from caseless import CaselessDict
 try:  # pragma: no cover
     # This import works for smart_open>=1.8.1
     from smart_open import open
-except ImportError as error:  # pragma: no cover
+except ImportError:  # pragma: no cover
     try:
         # This import works for smart_open<1.8.1
         from smart_open import smart_open as open
-    except ImportError as error:
+    except ImportError:
         pass
 
 from .util import maybe_render_markdown
 
-__all__: List[str] = ['ReadStructure', 'Sample', 'SampleSheet']
+__all__: List[str] = ["ReadStructure", "Sample", "SampleSheet"]
 
 DESIGN_HEADER: List[str] = [
-    'Sample_ID',
-    'Sample_Name',
-    'Library_ID',
-    'Description',
+    "Sample_ID",
+    "Sample_Name",
+    "Library_ID",
+    "Description",
 ]
 
-REQUIRED_KEYS: List[str] = ['Sample_ID']
-RECOMMENDED_KEYS: List[str] = ['Sample_ID', 'Sample_Name', 'index']
-REQUIRED_SECTIONS: List[str] = ['Header', 'Settings', 'Reads', 'Data']
+REQUIRED_KEYS: List[str] = ["Sample_ID"]
+RECOMMENDED_KEYS: List[str] = ["Sample_ID", "Sample_Name", "index"]
+REQUIRED_SECTIONS: List[str] = ["Header", "Settings", "Reads", "Data"]
 
 # The minimum column with of a detected TTY for wrapping text in CLI columns.
 MIN_WIDTH: int = 10
@@ -58,7 +57,7 @@ MIN_WIDTH: int = 10
 # https://www.illumina.com/content/dam/illumina-marketing/
 #     documents/products/technotes/
 #     sequencing-sheet-format-specifications-technical-note-970-2017-004.pdf
-VALID_ASCII: Set[str] = set(ascii_letters + digits + punctuation + ' \n\r')
+VALID_ASCII: Set[str] = set(ascii_letters + digits + punctuation + " \n\r")
 
 
 class ReadStructure(object):
@@ -105,16 +104,16 @@ class ReadStructure(object):
 
     """
 
-    _token_pattern = re.compile(r'(\d+[BMST])')
+    _token_pattern = re.compile(r"(\d+[BMST])")
 
     # operator can repeat one or more times along the entire string.
-    _valid_pattern = re.compile(r'^{}+$'.format(_token_pattern.pattern))
+    _valid_pattern = re.compile(r"^{}+$".format(_token_pattern.pattern))
 
-    _index_pattern = re.compile(r'(\d+B)')
-    _umi_pattern = re.compile(r'(\d+M)')
-    _skip_pattern = re.compile(r'(\d+S)')
-    _template_pattern = re.compile(r'(\d+T)')
-    _nonnumber_pattern = re.compile(r'\D')
+    _index_pattern = re.compile(r"(\d+B)")
+    _umi_pattern = re.compile(r"(\d+M)")
+    _skip_pattern = re.compile(r"(\d+S)")
+    _template_pattern = re.compile(r"(\d+T)")
+    _nonnumber_pattern = re.compile(r"\D")
 
     def __init__(self, structure: str) -> None:
         if not bool(self._valid_pattern.match(structure)):
@@ -123,7 +122,7 @@ class ReadStructure(object):
 
     def _sum_cycles_from_tokens(self, tokens: List[str]) -> int:
         """Sum the total number of cycles over a list of tokens."""
-        return sum((int(self._nonnumber_pattern.sub('', t)) for t in tokens))
+        return sum((int(self._nonnumber_pattern.sub("", t)) for t in tokens))
 
     @property
     def is_indexed(self) -> bool:
@@ -173,22 +172,22 @@ class ReadStructure(object):
     @property
     def template_cycles(self) -> int:
         """The number of cycles dedicated to template."""
-        return sum((int(re.sub(r'\D', '', op)) for op in self.template_tokens))
+        return sum((int(re.sub(r"\D", "", op)) for op in self.template_tokens))
 
     @property
     def skip_cycles(self) -> int:
         """The number of cycles dedicated to skips."""
-        return sum((int(re.sub(r'\D', '', op)) for op in self.skip_tokens))
+        return sum((int(re.sub(r"\D", "", op)) for op in self.skip_tokens))
 
     @property
     def umi_cycles(self) -> int:
         """The number of cycles dedicated to UMI."""
-        return sum((int(re.sub(r'\D', '', op)) for op in self.umi_tokens))
+        return sum((int(re.sub(r"\D", "", op)) for op in self.umi_tokens))
 
     @property
     def total_cycles(self) -> int:
         """The number of total number of cycles in the structure."""
-        return sum((int(re.sub(r'\D', '', op)) for op in self.tokens))
+        return sum((int(re.sub(r"\D", "", op)) for op in self.tokens))
 
     @property
     def tokens(self) -> List[str]:
@@ -215,7 +214,7 @@ class ReadStructure(object):
         """Return a list of all UMI tokens in the read structure."""
         return self._umi_pattern.findall(self.structure)
 
-    def copy(self) -> 'ReadStructure':
+    def copy(self) -> "ReadStructure":
         """Return a deep copy of this read structure."""
         return ReadStructure(self.structure)
 
@@ -227,10 +226,7 @@ class ReadStructure(object):
 
     def __repr__(self) -> str:
         """Return an executeable ``__repr__()``."""
-        return (
-            f'{self.__class__.__qualname__}('
-            f'structure=\'{self.structure}\')'
-        )
+        return f"{self.__class__.__qualname__}(" f"structure='{self.structure}')"
 
     def __str__(self) -> str:
         """Cast this object to string."""
@@ -269,13 +265,11 @@ class Sample(CaselessDict):
 
     """
 
-    _valid_index_key_pattern = re.compile(r'index\d?')
+    _valid_index_key_pattern = re.compile(r"index\d?")
     # https://kb.10xgenomics.com/hc/en-us/articles/218168503-What-oligos-are-in-my-sample-index-
-    _valid_index_value_pattern = re.compile(r'^[ACGTN]*$|^SI-[ACGTNS]{2}-[A-H]\d+$')
+    _valid_index_value_pattern = re.compile(r"^[ACGTN]*$|^SI-[ACGTNS]{2}-[A-H]\d+$")
 
-    def __init__(
-        self, data: Optional[Mapping] = None, **kwargs: Mapping
-    ) -> None:
+    def __init__(self, data: Optional[Mapping] = None, **kwargs: Mapping) -> None:
         super().__init__()
         data = {**data, **kwargs} if data is not None else kwargs
 
@@ -285,24 +279,17 @@ class Sample(CaselessDict):
         for key, value in data.items():
             # Promote a ``Read_Structure`` key to :class:`ReadStructure`.
             # Support case insensitivity and any amount of underscores.
-            if key.lower().replace('_', '') == 'readstructure':
+            if key.lower().replace("_", "") == "readstructure":
                 value = ReadStructure(str(value))
 
             # Check to make sure the index is valid if it is supplied.
-            if self._valid_index_key_pattern.match(key) and not bool(
-                self._valid_index_value_pattern.match(str(value))
-            ):
-                raise ValueError(f'Not a valid index: {value}')
+            if self._valid_index_key_pattern.match(key) and not bool(self._valid_index_value_pattern.match(str(value))):
+                raise ValueError(f"Not a valid index: {value}")
 
             self[key] = value
-        if (
-            self.Read_Structure is not None
-            and self.Read_Structure.is_single_indexed
-            and self.index is None
-        ):
+        if self.Read_Structure is not None and self.Read_Structure.is_single_indexed and self.index is None:
             raise ValueError(
-                f'If a single-indexed read structure is defined then a '
-                f'sample `index` must be defined also: {self}'
+                f"If a single-indexed read structure is defined then a " f"sample `index` must be defined also: {self}"
             )
         elif (
             self.Read_Structure is not None
@@ -311,31 +298,27 @@ class Sample(CaselessDict):
             and self.index2 is None
         ):
             raise ValueError(
-                f'If a dual-indexed read structure is defined then '
-                f'sample `index` and sample `index2` must be defined '
-                f'also: {self}'
+                f"If a dual-indexed read structure is defined then "
+                f"sample `index` and sample `index2` must be defined "
+                f"also: {self}"
             )
 
     def to_json(self) -> Mapping:
-        """Return the properties of this :class:`Sample` as JSON serializable.
-
-        """
+        """Return the properties of this :class:`Sample` as JSON serializable."""
         return {str(x): str(y) for x, y in self.items()}
 
     def __eq__(self, other: object) -> bool:
         """Samples are equal if the following attributes are equal:
 
-            - ``"Sample_ID"``
-            - ``"Library_ID"``
-            - ``"Lane"``
+        - ``"Sample_ID"``
+        - ``"Library_ID"``
+        - ``"Lane"``
 
         """
         if not isinstance(other, Sample):
             raise NotImplementedError
         is_equal: bool = (
-            self.Sample_ID == other.Sample_ID
-            and self.Library_ID == other.Library_ID
-            and self.Lane == other.Lane
+            self.Sample_ID == other.Sample_ID and self.Library_ID == other.Library_ID and self.Lane == other.Lane
         )
         return is_equal
 
@@ -343,31 +326,33 @@ class Sample(CaselessDict):
         """Return ``None`` if an attribute is undefined."""
         return super().get(attr)
 
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
     def __repr__(self) -> str:
         """Return an executeable ``__repr__()``."""
         args = {key: getattr(self, key) for key in RECOMMENDED_KEYS}
         args_str = args.__repr__()
-        return f'{self.__class__.__qualname__}({args_str})'
+        return f"{self.__class__.__qualname__}({args_str})"
 
     def __str__(self) -> str:
         """Cast this object to string."""
-        return str(self.Sample_ID) if self.Sample_ID is not None else ''
+        return str(self.Sample_ID) if self.Sample_ID is not None else ""
 
 
 class Section(CaselessDict):
-    """Case insensitive dictionary for retrieval, returns ``None`` as default.
+    """Case insensitive dictionary for retrieval, returns ``None`` as default."""
 
-    """
-
-    def __init__(
-        self, data: Optional[Mapping] = None, **kwargs: Mapping
-    ) -> None:
+    def __init__(self, data: Optional[Mapping] = None, **kwargs: Mapping) -> None:
         self._store: Mapping
         super().__init__(data=data, **kwargs)
 
     def __getattr__(self, attr: Any) -> Optional[Any]:
         """Return ``None`` if an attribute is undefined."""
         return super().get(attr)
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
 
 
 class SampleSheet(object):
@@ -395,9 +380,9 @@ class SampleSheet(object):
 
     """
 
-    _encoding: str = 'utf8'
-    _section_header_re = re.compile(r'\[(.*)\]')
-    _whitespace_re = re.compile(r'\s+')
+    _encoding: str = "utf8"
+    _section_header_re = re.compile(r"\[(.*)\]")
+    _whitespace_re = re.compile(r"\s+")
 
     def __init__(self, path: Optional[Union[Path, str, TextIO]] = None) -> None:
         self.path = path
@@ -413,17 +398,16 @@ class SampleSheet(object):
         self.Header: Section = Section()
         self.Settings: Section = Section()
 
-
         if self.path is not None:
-          if isinstance(self.path, (str, Path)):
-            with open(self.path, 'r') as f:
-              self._parse(f)
-          else:
-            self._parse(self.path)
+            if isinstance(self.path, (str, Path)):
+                with open(self.path, "r") as f:
+                    self._parse(f)
+            else:
+                self._parse(self.path)
 
     def add_section(self, section_name: str) -> None:
         """Add a section to the :class:`SampleSheet`."""
-        section_name = self._whitespace_re.sub('_', section_name)
+        section_name = self._whitespace_re.sub("_", section_name)
         self._sections.append(section_name)
         setattr(self, section_name, Section())
 
@@ -456,12 +440,12 @@ class SampleSheet(object):
         from tabulate import tabulate
 
         if not self.samples:
-            raise ValueError('No samples in sample sheet')
+            raise ValueError("No samples in sample sheet")
 
         markdown = tabulate(
-            [[getattr(s, h, '') for h in DESIGN_HEADER] for s in self.samples],
+            [[getattr(s, h, "") for h in DESIGN_HEADER] for s in self.samples],
             headers=DESIGN_HEADER,
-            tablefmt='pipe',
+            tablefmt="pipe",
         )
 
         return maybe_render_markdown(markdown)
@@ -482,7 +466,7 @@ class SampleSheet(object):
         return self._samples
 
     def _parse(self, handle: TextIO) -> None:
-        section_name: str = ''
+        section_name: str = ""
         sample_header: Optional[List[str]] = None
 
         lines = list(csv.reader(handle, skipinitialspace=True))
@@ -493,45 +477,33 @@ class SampleSheet(object):
             #
             #   https://github.com/clintval/sample-sheet/issues/46
             #
-            if not ''.join(line).strip():
+            if not "".join(line).strip():
                 continue
 
             # Raise exception if we encounter invalid characters.
-            if any(
-                character not in VALID_ASCII
-                for character in set(''.join(line))
-            ):
-                raise ValueError(
-                    f'Sample sheet contains invalid characters on line '
-                    f'{i + 1}: {"".join(line)}'
-                )
+            if any(character not in VALID_ASCII for character in set("".join(line))):
+                raise ValueError(f"Sample sheet contains invalid characters on line " f'{i + 1}: {"".join(line)}')
 
             header_match = self._section_header_re.match(line[0])
 
             # If we enter a section save it's name and continue to next line.
             if header_match:
                 section_name, *_ = header_match.groups()
-                if (
-                    section_name not in self._sections
-                    and section_name not in REQUIRED_SECTIONS
-                ):
+                if section_name not in self._sections and section_name not in REQUIRED_SECTIONS:
                     self.add_section(section_name)
                 continue
 
             # [Reads] - vertical list of integers.
-            if section_name == 'Reads':
+            if section_name == "Reads":
                 self.Reads.append(int(line[0]))
                 continue
 
             # [Data] - delimited data with the first line a header.
-            elif section_name == 'Data':
+            elif section_name == "Data":
                 if sample_header is not None:
                     self.add_sample(Sample(dict(zip(sample_header, line))))
-                elif any(key == '' for key in line):
-                    raise ValueError(
-                        f'Header for [Data] section is not allowed to '
-                        f'have empty fields: {line}'
-                    )
+                elif any(key == "" for key in line):
+                    raise ValueError(f"Header for [Data] section is not allowed to " f"have empty fields: {line}")
                 else:
                     sample_header = line
                 continue
@@ -591,11 +563,7 @@ class SampleSheet(object):
             self.samples_have_index = sample.index is not None
             self.samples_have_index2 = sample.index2 is not None
 
-        if (
-            len(self.samples) == 0
-            and sample.Read_Structure is not None
-            and self.Read_Structure is None
-        ):
+        if len(self.samples) == 0 and sample.Read_Structure is not None and self.Read_Structure is None:
             # If this is the first sample added to the sample sheet then
             # assume the ``SampleSheet.Read_Structure`` inherits the
             # ``sample.Read_Structure`` only if ``SampleSheet.Read_Structure``
@@ -608,9 +576,9 @@ class SampleSheet(object):
                 and not sample.Read_Structure.is_single_end
             ):
                 raise ValueError(
-                    f'Sample sheet pairing has been set with '
+                    f"Sample sheet pairing has been set with "
                     f'Reads:"{self.Reads}" and is not compatible with sample '
-                    f'read structure: {sample.Read_Structure}'
+                    f"read structure: {sample.Read_Structure}"
                 )
 
             # Make a copy of this samples read_structure for the sample sheet.
@@ -620,8 +588,8 @@ class SampleSheet(object):
         # attribute, which can be None, to ensure they are the same.
         if self.Read_Structure != sample.Read_Structure:
             raise ValueError(
-                f'Sample read structure ({sample.Read_Structure}) different '
-                f'than read structure in samplesheet ({self.Read_Structure}).'
+                f"Sample read structure ({sample.Read_Structure}) different "
+                f"than read structure in samplesheet ({self.Read_Structure})."
             )
 
         # Compare this sample against all those already defined to ensure none
@@ -630,21 +598,17 @@ class SampleSheet(object):
         # both if they have been defined.
         for other in self.samples:
             if sample == other:
-                message = (
-                    f'Two equivalent samples added:'
-                    f'\n\n1): {sample.__repr__()}\n2): {other.__repr__()}\n'
-                )
+                message = f"Two equivalent samples added:" f"\n\n1): {sample.__repr__()}\n2): {other.__repr__()}\n"
                 # TODO: Look into if this is truly illegal or not.
                 warnings.warn(UserWarning(message))
             if sample.index is None and self.samples_have_index:
                 raise ValueError(
-                    f'Cannot add a sample without attribute `index` if a '
-                    f'previous sample has `index` set: {sample})'
+                    f"Cannot add a sample without attribute `index` if a " f"previous sample has `index` set: {sample})"
                 )
             if sample.index2 is None and self.samples_have_index2:
                 raise ValueError(
-                    f'Cannot add a sample without attribute `index2` if a '
-                    f'previous sample has `index2` set: {sample})'
+                    f"Cannot add a sample without attribute `index2` if a "
+                    f"previous sample has `index2` set: {sample})"
                 )
 
             # Prevent index collisions when samples are dual-indexed
@@ -656,8 +620,8 @@ class SampleSheet(object):
                 and sample.Lane == other.Lane
             ):
                 raise ValueError(
-                    f'Sample index combination for {sample} has already been '
-                    f'added on this lane or flowcell: {other}'
+                    f"Sample index combination for {sample} has already been "
+                    f"added on this lane or flowcell: {other}"
                 )
 
             # Prevent index collisions when samples are single-indexed (index)
@@ -668,8 +632,7 @@ class SampleSheet(object):
                 and sample.Lane == other.Lane
             ):
                 raise ValueError(
-                    f'First sample index for {sample} has already been '
-                    f'added on this lane or flowcell: {other}'
+                    f"First sample index for {sample} has already been " f"added on this lane or flowcell: {other}"
                 )
 
             # Prevent index collisions when samples are single-indexed (index2)
@@ -680,8 +643,7 @@ class SampleSheet(object):
                 and sample.Lane == other.Lane
             ):
                 raise ValueError(
-                    f'Second sample index for {sample} has already been '
-                    f'added on this lane or flowcell: {other}'
+                    f"Second sample index for {sample} has already been " f"added on this lane or flowcell: {other}"
                 )
 
         sample.sample_sheet = self
@@ -700,10 +662,10 @@ class SampleSheet(object):
 
         """
         content = {
-            'Header': dict(self.Header),
-            'Reads': self.Reads,
-            'Settings': dict(self.Settings),
-            'Data': [sample.to_json() for sample in self.samples],
+            "Header": dict(self.Header),
+            "Reads": self.Reads,
+            "Settings": dict(self.Settings),
+            "Data": [sample.to_json() for sample in self.samples],
             **{title: dict(getattr(self, title)) for title in self._sections},
         }
         return json.dumps(content, **kwargs)  # type: ignore
@@ -748,23 +710,22 @@ class SampleSheet(object):
 
         """
         if len(self.samples) == 0:
-            raise ValueError('No samples in sample sheet')
+            raise ValueError("No samples in sample sheet")
         if not (
             isinstance(lanes, int)
             or isinstance(lanes, (list, tuple))
             and len(lanes) > 0
             and all(isinstance(lane, int) for lane in lanes)
         ):
-            raise ValueError(f'Lanes must be an int or list of ints: {lanes}')
-        if len(set(len(sample.index or '') for sample in self.samples)) != 1:
-            raise ValueError('I7 indexes have differing lengths.')
-        if len(set(len(sample.index2 or '') for sample in self.samples)) != 1:
-            raise ValueError('I5 indexes have differing lengths.')
-        for attr in ('Sample_Name', 'Library_ID', 'index'):
+            raise ValueError(f"Lanes must be an int or list of ints: {lanes}")
+        if len(set(len(sample.index or "") for sample in self.samples)) != 1:
+            raise ValueError("I7 indexes have differing lengths.")
+        if len(set(len(sample.index2 or "") for sample in self.samples)) != 1:
+            raise ValueError("I5 indexes have differing lengths.")
+        for attr in ("Sample_Name", "Library_ID", "index"):
             if any(getattr(sample, attr) is None for sample in self.samples):
                 raise ValueError(
-                    'Samples must have at least `Sample_Name`, '
-                    '`Sample_Library`, and `index` attributes'
+                    "Samples must have at least `Sample_Name`, " "`Sample_Library`, and `index` attributes"
                 )
 
         # Make lanes iterable if only an int was provided.
@@ -780,39 +741,27 @@ class SampleSheet(object):
         # Both headers are one column larger if an ``index2`` attribute is
         # present on all samples. Use list splatting to unpack the options.
         barcode_header = [
-            *(
-                ['barcode_sequence_1']
-                if not self.samples_have_index2
-                else ['barcode_sequence_1', 'barcode_sequence_2']
-            ),
-            'barcode_name',
-            'library_name',
+            *(["barcode_sequence_1"] if not self.samples_have_index2 else ["barcode_sequence_1", "barcode_sequence_2"]),
+            "barcode_name",
+            "library_name",
         ]
         # TODO: Remove description if none is provided on all samples.
         library_header = [
-            *(
-                ['BARCODE_1']
-                if not self.samples_have_index2
-                else ['BARCODE_1', 'BARCODE_2']
-            ),
-            'OUTPUT',
-            'SAMPLE_ALIAS',
-            'LIBRARY_NAME',
-            'DS',
+            *(["BARCODE_1"] if not self.samples_have_index2 else ["BARCODE_1", "BARCODE_2"]),
+            "OUTPUT",
+            "SAMPLE_ALIAS",
+            "LIBRARY_NAME",
+            "DS",
         ]
 
         for lane in lanes:
-            barcode_out = prefix / f'barcode_params.{lane}.txt'
-            library_out = prefix / f'library_params.{lane}.txt'
+            barcode_out = prefix / f"barcode_params.{lane}.txt"
+            library_out = prefix / f"library_params.{lane}.txt"
 
             # Enter into a writing context for both library and barcode params.
             with ExitStack() as stack:
-                barcode_writer = csv.writer(
-                    stack.enter_context(barcode_out.open('w')), delimiter='\t'
-                )
-                library_writer = csv.writer(
-                    stack.enter_context(library_out.open('w')), delimiter='\t'
-                )
+                barcode_writer = csv.writer(stack.enter_context(barcode_out.open("w")), delimiter="\t")
+                library_writer = csv.writer(stack.enter_context(library_out.open("w")), delimiter="\t")
 
                 barcode_writer.writerow(barcode_header)
                 library_writer.writerow(library_header)
@@ -820,43 +769,29 @@ class SampleSheet(object):
                 for sample in self.samples:
                     # The long name of a sample is a combination of the sample
                     # ID and the sample library.
-                    long_name = '.'.join(
-                        [sample.Sample_Name, sample.Library_ID]
-                    )
+                    long_name = ".".join([sample.Sample_Name, sample.Library_ID])
 
                     # The barcode name is all sample indexes concatenated.
-                    barcode_name = sample.index + (sample.index2 or '')
-                    library_name = sample.Library_ID or ''
+                    barcode_name = sample.index + (sample.index2 or "")
+                    library_name = sample.Library_ID or ""
 
                     # Assemble the path to the future BAM file.
-                    bam_file = (
-                        bam_prefix
-                        / long_name
-                        / f'{sample.Sample_Name}.{barcode_name}.{lane}.bam'
-                    )
+                    bam_file = bam_prefix / long_name / f"{sample.Sample_Name}.{barcode_name}.{lane}.bam"
 
                     # Use list splatting to build the contents of the library
                     # and barcodes parameter files.
                     barcode_line = [
-                        *(
-                            [sample.index]
-                            if not self.samples_have_index2
-                            else [sample.index, sample.index2]
-                        ),
+                        *([sample.index] if not self.samples_have_index2 else [sample.index, sample.index2]),
                         barcode_name,
                         library_name,
                     ]
 
                     library_line = [
-                        *(
-                            [sample.index]
-                            if not self.samples_have_index2
-                            else [sample.index, sample.index2]
-                        ),
+                        *([sample.index] if not self.samples_have_index2 else [sample.index, sample.index2]),
                         bam_file,
                         sample.Sample_Name,
                         sample.Library_ID,
-                        sample.Description or '',
+                        sample.Description or "",
                     ]
 
                     barcode_writer.writerow(map(str, barcode_line))
@@ -864,13 +799,13 @@ class SampleSheet(object):
 
                 # Dempultiplexing relys on an umatched file so append that,
                 # but only to the library parameters file.
-                unmatched_file = bam_prefix / f'unmatched.{lane}.bam'
+                unmatched_file = bam_prefix / f"unmatched.{lane}.bam"
                 library_line = [
-                    *(['N'] if not self.samples_have_index2 else ['N', 'N']),
+                    *(["N"] if not self.samples_have_index2 else ["N", "N"]),
                     unmatched_file,
-                    'unmatched',
-                    'unmatchedunmatched',
-                    '',
+                    "unmatched",
+                    "unmatchedunmatched",
+                    "",
                 ]
                 library_writer.writerow(map(str, library_line))
 
@@ -883,28 +818,24 @@ class SampleSheet(object):
 
         """
         if not isinstance(blank_lines, int) or blank_lines <= 0:
-            raise ValueError('Number of blank lines must be a positive int.')
+            raise ValueError("Number of blank lines must be a positive int.")
 
         writer = csv.writer(handle)
         csv_width: int = max([len(self.all_sample_keys), 2])
 
-        section_order = ['Header', 'Reads'] + self._sections + ['Settings']
+        section_order = ["Header", "Reads"] + self._sections + ["Settings"]
 
-        def pad_iterable(
-            iterable: Iterable, size: int = csv_width, padding: str = ''
-        ) -> List[str]:
+        def pad_iterable(iterable: Iterable, size: int = csv_width, padding: str = "") -> List[str]:
             return list(islice(chain(iterable, repeat(padding)), size))
 
-        def write_blank_lines(
-            writer: Any, n: int = blank_lines, width: int = csv_width
-        ) -> None:
+        def write_blank_lines(writer: Any, n: int = blank_lines, width: int = csv_width) -> None:
             for i in range(n):
                 writer.writerow(pad_iterable([], width))
 
         for title in section_order:
-            writer.writerow(pad_iterable([f'[{title}]'], csv_width))
+            writer.writerow(pad_iterable([f"[{title}]"], csv_width))
             section = getattr(self, title)
-            if title == 'Reads':
+            if title == "Reads":
                 for read in self.Reads:
                     writer.writerow(pad_iterable([read], csv_width))
             else:
@@ -912,7 +843,7 @@ class SampleSheet(object):
                     writer.writerow(pad_iterable([key, value], csv_width))
             write_blank_lines(writer)
 
-        writer.writerow(pad_iterable(['[Data]'], csv_width))
+        writer.writerow(pad_iterable(["[Data]"], csv_width))
         writer.writerow(pad_iterable(self.all_sample_keys, csv_width))
 
         for sample in self.samples:
@@ -929,8 +860,8 @@ class SampleSheet(object):
 
     def __repr__(self) -> str:
         """Show the constructor command to initialize this object."""
-        path = f'\'{self.path}\'' if self.path else 'None'
-        return f'{self.__class__.__qualname__}({path})'
+        path = f"'{self.path}'" if self.path else "None"
+        return f"{self.__class__.__qualname__}({path})"
 
     def __str__(self) -> str:
         """Prints a summary representation of this :class:`SampleSheet`.
@@ -954,50 +885,44 @@ class SampleSheet(object):
         """Return a summary of this sample sheet in a TTY compatible codec."""
         from terminaltables import SingleTable
 
-        header_description = ['Sample_ID', 'Description']
+        header_description = ["Sample_ID", "Description"]
         header_samples = [
-            'Sample_ID',
-            'Sample_Name',
-            'Library_ID',
-            'index',
-            'index2',
+            "Sample_ID",
+            "Sample_Name",
+            "Library_ID",
+            "index",
+            "index2",
         ]
 
-        header = SingleTable([], 'Header')
-        setting = SingleTable([], 'Settings')
-        sample_main = SingleTable([header_samples], 'Identifiers')
-        sample_desc = SingleTable([header_description], 'Descriptions')
+        header = SingleTable([], "Header")
+        setting = SingleTable([], "Settings")
+        sample_main = SingleTable([header_samples], "Identifiers")
+        sample_desc = SingleTable([header_description], "Descriptions")
 
         # All key:value pairs found in the [Header] section.
         max_header_width = max(MIN_WIDTH, sample_desc.column_max_width(-1))
         for key in self.Header.keys():
-            if 'Description' in key:
-                value = '\n'.join(
-                    wrap(getattr(self.Header, key), max_header_width)
-                )
+            if "Description" in key:
+                value = "\n".join(wrap(getattr(self.Header, key), max_header_width))
             else:
                 value = getattr(self.Header, key)
             header.table_data.append([key, value])
 
         # All key:value pairs found in the [Settings] and [Reads] sections.
         for key in self.Settings.keys():
-            setting.table_data.append((key, getattr(self.Settings, key) or ''))
-        setting.table_data.append(('Reads', ', '.join(map(str, self.Reads))))
+            setting.table_data.append((key, getattr(self.Settings, key) or ""))
+        setting.table_data.append(("Reads", ", ".join(map(str, self.Reads))))
 
         # Descriptions are wrapped to the allowable space remaining.
         description_width = max(MIN_WIDTH, sample_desc.column_max_width(-1))
         for sample in self.samples:
             # Add all key:value pairs for this sample
-            sample_main.table_data.append(
-                [getattr(sample, title) or '' for title in header_samples]
-            )
+            sample_main.table_data.append([getattr(sample, title) or "" for title in header_samples])
             # Wrap and add the sample descrption
             sample_desc.table_data.append(
                 (
                     sample.Sample_ID,
-                    '\n'.join(
-                        wrap(sample.Description or '', description_width)
-                    ),
+                    "\n".join(wrap(sample.Description or "", description_width)),
                 )
             )
 
@@ -1005,8 +930,6 @@ class SampleSheet(object):
         header.inner_heading_row_border = False
         setting.inner_heading_row_border = False
 
-        table = '\n'.join(
-            [header.table, setting.table, sample_main.table, sample_desc.table]
-        )
+        table = "\n".join([header.table, setting.table, sample_main.table, sample_desc.table])
 
         return table

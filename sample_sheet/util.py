@@ -1,14 +1,14 @@
 # pylint: disable=E0401
 from typing import Any
 
-__all__ = ['is_ipython_interpreter', 'maybe_render_markdown']
+__all__ = ["is_ipython_interpreter", "maybe_render_markdown"]
 
 
 def is_ipython_interpreter() -> bool:  # pragma: no cover
     """Return if we are in an IPython interpreter or not."""
     import __main__ as main  # type: ignore
 
-    return hasattr(main, '__IPYTHON__')
+    return hasattr(main, "__IPYTHON__")
 
 
 def maybe_render_markdown(string: str) -> Any:
