@@ -269,14 +269,15 @@ class Sample(CaselessDict):
     # https://kb.10xgenomics.com/hc/en-us/articles/218168503-What-oligos-are-in-my-sample-index-
     _valid_index_value_pattern = re.compile(r"^[ACGTN]*$|^SI-[ACGTNS]{2}-[A-H]\d+$")
 
-    def __init__(self, data: Optional[Mapping] = None, **kwargs: Mapping) -> None:
-        super().__init__()
-        data = {**data, **kwargs} if data is not None else kwargs
+    def __init__(self, *args, **kwargs) -> 'Sample':
+        super().__init__(*args, **kwargs)
+        self.data = dict(self)
+        self.sample_sheet = None
+        self.validate()
 
-        self._store: Mapping
-        self.sample_sheet: Optional[SampleSheet] = None
-
-        for key, value in data.items():
+    def validate(self) -> None:
+        """Validate this sample."""
+        for key, value in self.items():
             # Promote a ``Read_Structure`` key to :class:`ReadStructure`.
             # Support case insensitivity and any amount of underscores.
             if key.lower().replace("_", "") == "readstructure":
@@ -343,9 +344,8 @@ class Sample(CaselessDict):
 class Section(CaselessDict):
     """Case insensitive dictionary for retrieval, returns ``None`` as default."""
 
-    def __init__(self, data: Optional[Mapping] = None, **kwargs: Mapping) -> None:
-        self._store: Mapping
-        super().__init__(data=data, **kwargs)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
     def __getattr__(self, attr: Any) -> Optional[Any]:
         """Return ``None`` if an attribute is undefined."""

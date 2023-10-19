@@ -6,7 +6,6 @@ on:
 env:
   PY_COLORS: "1"
 
-    
 jobs:
   TestAndLint:
     runs-on: ubuntu-latest
@@ -24,5 +23,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install poetry tox tox-gh-actions
+      - name: Test the lock file is up to date
+        run: python -m poetry check --lock
       - name: Test the Python version with tox
         run: tox
