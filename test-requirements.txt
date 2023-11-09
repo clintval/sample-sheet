@@ -16,3 +16,6 @@ pytest==5.0.0
 pytest-cov==2.7.1
 pytest-doctestplus==0.3.0
 pytest-parallel==0.0.9
+requests==2.31.0
+tabulate==0.9.0
+terminaltables==3.1.10
