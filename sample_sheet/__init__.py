@@ -1008,3 +1008,155 @@ class SampleSheet(object):
         )
 
         return table
+
+
+class SampleSheetV2(SampleSheet):
+    REQUIRED_SECTIONS_V2: List[str] = ['Header', 'Reads', 'BCLConvert_Settings', 'BCLConvert_Data']
+
+    def __init__(self, path: Optional[Union[Path, str, TextIO]] = None) -> None:
+        self.path = path
+
+        self._samples: List[Sample] = []
+        self._sections: List[str] = []
+
+        self.Header: Section = Section()
+        self.Reads: Section = Section()
+        self.BCLConvert_Settings = Section()
+        self.BCLConvert_Data = Section()
+        self.Read_Structure: Optional[ReadStructure] = None
+        self.samples_have_index: Optional[bool] = None
+        self.samples_have_index2: Optional[bool] = None
+
+        if self.path is not None:
+            if isinstance(self.path, (str, Path)):
+                with open(self.path, 'r') as f:
+                    self._parse(f)
+            else:
+                self._parse(self.path)
+
+    def _parse(self, handle: TextIO) -> None:
+        section_name: str = ''
+        sample_header: Optional[List[str]] = None
+
+        lines = list(csv.reader(handle, skipinitialspace=True))
+
+        for i, line in enumerate(lines):
+            # Skip to next line if this line is empty to support formats of
+            # sample sheets with multiple newlines as section separators.
+            #
+            #   https://github.com/clintval/sample-sheet/issues/46
+            #
+            if not ''.join(line).strip():
+                continue
+
+            # Raise exception if we encounter invalid characters.
+            if any(
+                    character not in VALID_ASCII
+                    for character in set(''.join(line))
+            ):
+                raise ValueError(
+                    f'Sample sheet contains invalid characters on line '
+                    f'{i + 1}: {"".join(line)}'
+                )
+
+            header_match = self._section_header_re.match(line[0])
+
+            # If we enter a section save its name and continue to next line.
+            if header_match:
+                # reset previously set sample_header
+                sample_header = None
+                section_name, *_ = header_match.groups()
+                if (
+                        section_name not in self._sections
+                        and section_name not in self.REQUIRED_SECTIONS_V2
+                ):
+                    self.add_section(section_name)
+                continue
+
+            # Data section handling - create a ${section_name} Section with an attribute `content`, which is as an
+            # array, and each row of the data section is converted as a dictionary and append to it.
+            if section_name.endswith('_Data'):
+                if sample_header is not None:
+                    section: Section = getattr(self, section_name)
+                    section['content'].append(CaseInsensitiveDict(dict(zip(sample_header, line))))
+                    # Construct Sample attribute based on BCLConvert_Data
+                    if section_name == 'BCLConvert_Data':
+                        self.add_sample(Sample(dict(zip(sample_header, line))))
+                else:
+                    sample_header = [item for item in line if item]
+                    section: Section = getattr(self, section_name)
+                    section['content'] = []
+                continue
+
+            # Setting section handling - keys in first column and values in second column.
+            if len(line) >= 2:
+                key, value = (line[0], line[1])
+                section: Section = getattr(self, section_name)
+                section[key] = value
+
+    @property
+    def is_paired_end(self) -> Optional[bool]:
+        """Return if the samples are paired-end."""
+        return None if not self.Reads else self.Reads.get('Read2Cycles', None) is not None
+
+    @property
+    def is_single_end(self) -> Optional[bool]:
+        """Return if the samples are single-end."""
+        return None if not self.Reads else self.Reads.get('Read2Cycles', None) is None
+
+    def to_json(self, **kwargs: Mapping) -> str:
+        """Write this :class:`SampleSheet` to JSON.
+
+        Returns:
+            str: The JSON dump of all entries in this sample sheet.
+
+        """
+        content = {
+            'Header': dict(self.Header),
+            'Reads': self.Reads,
+            'Data': [sample.to_json() for sample in self.samples],
+            **{title: dict(getattr(self, title)) for title in self._sections},
+        }
+        return json.dumps(content, **kwargs)  # type: ignore
+
+    def write(self, handle: TextIO, blank_lines: int = 1) -> None:
+        """Write this :class:`SampleSheet` to a file-like object.
+
+        Args:
+            handle: Object to wrap by csv.writer.
+            blank_lines: Number of blank lines to write between sections.
+
+        """
+        if not isinstance(blank_lines, int) or blank_lines <= 0:
+            raise ValueError('Number of blank lines must be a positive int.')
+
+        writer = csv.writer(handle)
+        csv_width: int = max([len(self.all_sample_keys), 2])
+
+        section_order = ['Header', 'Reads', 'BCLConvert_Settings']
+
+        def pad_iterable(
+            iterable: Iterable, size: int = csv_width, padding: str = ''
+        ) -> List[str]:
+            return list(islice(chain(iterable, repeat(padding)), size))
+
+        def write_blank_lines(
+            writer: Any, n: int = blank_lines, width: int = csv_width
+        ) -> None:
+            for i in range(n):
+                writer.writerow(pad_iterable([], width))
+
+        for title in section_order:
+            writer.writerow(pad_iterable([f'[{title}]'], csv_width))
+            section = getattr(self, title)
+
+            for key, value in section.items():
+                writer.writerow(pad_iterable([key, value], csv_width))
+            write_blank_lines(writer)
+
+        writer.writerow(pad_iterable(['[BCLConvert_Data]'], csv_width))
+        writer.writerow(pad_iterable(self.all_sample_keys, csv_width))
+
+        for sample in self.samples:
+            line = [getattr(sample, key) for key in self.all_sample_keys]
+            writer.writerow(pad_iterable(line, csv_width))
