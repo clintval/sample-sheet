@@ -519,9 +519,9 @@ class TestSampleSheet(TestCase):
 
             library_params = (
                 'BARCODE_1\tBARCODE_2\tOUTPUT\tSAMPLE_ALIAS\tLIBRARY_NAME\tDS\n'  # noqa
-                'GAACT\tAGTTC\t/home/user/49-tissue.exp001/49-tissue.GAACTAGTTC.{lane}.bam\t49-tissue\texp001\tLorum ipsum!\n'  # noqa
-                'TGGGT\tACCCA\t/home/user/23-tissue.exp001/23-tissue.TGGGTACCCA.{lane}.bam\t23-tissue\texp001\tTest description!\n'  # noqa
-                'N\tN\t/home/user/unmatched.{lane}.bam\tunmatched\tunmatchedunmatched\t\n'
+                'GAACT\tAGTTC\t/System/Volumes/Data/home/user/49-tissue.exp001/49-tissue.GAACTAGTTC.{lane}.bam\t49-tissue\texp001\tLorum ipsum!\n'  # noqa
+                'TGGGT\tACCCA\t/System/Volumes/Data/home/user/23-tissue.exp001/23-tissue.TGGGTACCCA.{lane}.bam\t23-tissue\texp001\tTest description!\n'  # noqa
+                'N\tN\t/System/Volumes/Data/home/user/unmatched.{lane}.bam\tunmatched\tunmatchedunmatched\t\n'
             )  # noqa
 
             self.assertMultiLineEqual(
