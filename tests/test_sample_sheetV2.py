@@ -535,19 +535,19 @@ class TestSampleSheetV2(TestCase):
     def test_add_section(self):
         """Test ``add_section()`` to add a section and bind key:values to it"""
         sample_sheet = SampleSheetV2()
-        sample_sheet.add_section('Manifests')
-        sample_sheet.Manifests['PoolRNA'] = 'RNAMatrix.txt'
-        sample_sheet.Manifests['PoolDNA'] = 'DNAMatrix.txt'
+        sample_sheet.add_section('Manifests_Settings')
+        sample_sheet.Manifests_Settings['PoolRNA'] = 'RNAMatrix.txt'
+        sample_sheet.Manifests_Settings['PoolDNA'] = 'DNAMatrix.txt'
 
-        assert list(sample_sheet.Manifests.keys()) == ['PoolRNA', 'PoolDNA']
+        assert list(sample_sheet.Manifests_Settings.keys()) == ['PoolRNA', 'PoolDNA']
 
         # Access via ``__getitem__()``
-        eq_(sample_sheet.Manifests['PoolRNA'], 'RNAMatrix.txt')
-        eq_(sample_sheet.Manifests['PoolDNA'], 'DNAMatrix.txt')
+        eq_(sample_sheet.Manifests_Settings['PoolRNA'], 'RNAMatrix.txt')
+        eq_(sample_sheet.Manifests_Settings['PoolDNA'], 'DNAMatrix.txt')
 
         # Access via ``__getattr__()``
-        eq_(sample_sheet.Manifests.PoolRNA, 'RNAMatrix.txt')
-        eq_(sample_sheet.Manifests.PoolDNA, 'DNAMatrix.txt')
+        eq_(sample_sheet.Manifests_Settings.PoolRNA, 'RNAMatrix.txt')
+        eq_(sample_sheet.Manifests_Settings.PoolDNA, 'DNAMatrix.txt')
 
     def test_to_json(self):
         """Test ``SampleSheet.to_json()`` all output"""
@@ -565,7 +565,7 @@ class TestSampleSheetV2(TestCase):
         sample_sheet.add_sample(sample)
         actual = sample_sheet.to_json(indent=4, sort_keys=True)
         expected = (
-            '{\n    "Data": [\n        {\n            "Sample_ID": "1823A",\n            "Sample_Name": "1823A-tissue",\n            "index": "ACGT"\n        }\n    ],\n    "Header": {\n        "IEM4FileVersion": 4,\n        "Investigator Name": "jdoe"\n    },\n    "Reads": {\n        "Read1Cycles": "151",\n        "Read2Cycles": "151"\n    }\n}'
+            '{\n    "BCLConvert_Data": [\n        {\n            "Sample_ID": "1823A",\n            "Sample_Name": "1823A-tissue",\n            "index": "ACGT"\n        }\n    ],\n    "BCLConvert_Settings": {},\n    "Header": {\n        "IEM4FileVersion": 4,\n        "Investigator Name": "jdoe"\n    },\n    "Reads": {\n        "Read1Cycles": "151",\n        "Read2Cycles": "151"\n    }\n}'
         )
         eq_(expected, actual)
 
@@ -579,9 +579,7 @@ class TestSampleSheetV2(TestCase):
 
         string_handle.seek(0)
 
-        with open(infile, 'r', newline='\n', encoding='utf-8') as handle:
-            print(string_handle.read())
-            print(handle.read())
+        with open(infile, 'r', encoding='utf-8') as handle:
             self.assertMultiLineEqual(string_handle.read(), handle.read())
 
     def test_no_line_comma_pad_read(self):
@@ -600,14 +598,14 @@ class TestSampleSheetV2(TestCase):
 
     def test_read_with_additional_section(self):
         """"Test ``SampleSheet.read()`` for reading with a Manifests section"""
-        infile = RESOURCES / 'paired-end-single-index-with-manifest.csv'
+        infile = RESOURCES / 'V2-paired-end-with-manifest.csv'
         sample_sheet = SampleSheetV2(infile)
-        assert sample_sheet.Manifests.RNAPool == 'test'
+        assert sample_sheet.Manifests_Settings.RNAPool == 'test'
 
     @pytest.mark.filterwarnings("ignore:Two equivalent")
     def test_write_with_equal_samples_and_custom_ordered_header(self):
         """Test ``write()`` when given invalid number of blank lines"""
-        infile = RESOURCES / 'single-end-colliding-sample-ids.csv'
+        infile = RESOURCES / 'V2-paired-end.csv'
         sample_sheet1 = SampleSheetV2(infile)
 
         # Write to string and make temporary file
@@ -624,7 +622,7 @@ class TestSampleSheetV2(TestCase):
 
     def test_write_invalid_num_blank_lines(self):
         """Test ``write()`` when given invalid number of blank lines"""
-        infile = RESOURCES / 'paired-end-single-index.csv'
+        infile = RESOURCES / 'V2-paired-end.csv'
         sample_sheet = SampleSheetV2(infile)
 
         string_handle = StringIO(newline=None)
@@ -659,14 +657,14 @@ class TestSampleSheetV2(TestCase):
 
     def test_str(self):
         """Test ``__str__()``, when not printing to a TTY"""
-        infile = RESOURCES / 'paired-end-single-index.csv'
+        infile = RESOURCES / 'V2-paired-end.csv'
         eq_(
             SampleSheetV2(infile).__str__(), 'SampleSheetV2(\'{}\')'.format(infile)
         )
 
     def test_repr(self):
         """Test ``__repr__()``"""
-        infile = RESOURCES / 'paired-end-single-index.csv'
+        infile = RESOURCES / 'V2-paired-end.csv'
         eq_(
             SampleSheetV2(infile).__repr__(),
             'SampleSheetV2(\'{}\')'.format(infile),
