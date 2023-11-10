@@ -372,6 +372,16 @@ class Section(CaseInsensitiveDict):
         return super().get(attr)
 
 
+class DataSection(List):
+
+    def __init__(
+            self, data: Optional[List] = None, **kwargs: List
+    ) -> None:
+        self._store: List
+        if data:
+            super().__init__(data)
+
+
 class SampleSheetBase(object):
     """A representation of an Illumina sample sheet.
 
@@ -1024,7 +1034,9 @@ class SampleSheetV2(SampleSheetBase):
         super(SampleSheetV2, self).__init__(path)
         self.Reads: Section = Section()
         self.BCLConvert_Settings = Section()
-        self.BCLConvert_Data = Section()
+        self.BCLConvert_Data = DataSection()
+        self._data_sections: List[str] = []
+        self._csv_width = 0
 
         if self.path is not None:
             if isinstance(self.path, (str, Path)):
@@ -1033,11 +1045,24 @@ class SampleSheetV2(SampleSheetBase):
             else:
                 self._parse(self.path)
 
+    def add_section(self, section_name: str) -> None:
+        """Add a section to the :class:`SampleSheet`."""
+        section_name = self._whitespace_re.sub('_', section_name)
+        if section_name.endswith('_Settings'):
+            self._sections.append(section_name)
+            setattr(self, section_name, Section())
+        elif section_name.endswith('_Data'):
+            self._data_sections.append(section_name)
+            setattr(self, section_name, DataSection())
+
     def _parse(self, handle: TextIO) -> None:
         section_name: str = ''
         sample_header: Optional[List[str]] = None
 
         lines = list(csv.reader(handle, skipinitialspace=True))
+        for l in lines:
+            if len(l) > self._csv_width:
+                self._csv_width = len(l)
 
         for i, line in enumerate(lines):
             # Skip to next line if this line is empty to support formats of
@@ -1077,13 +1102,13 @@ class SampleSheetV2(SampleSheetBase):
             section: Section = getattr(self, section_name)
             if section_name.endswith('_Data'):
                 if sample_header is not None:
-                    section['content'].append(CaseInsensitiveDict(dict(zip(sample_header, line))))
+                    section.append(dict(zip(sample_header, line)))
+
                     # Construct Sample attribute based on BCLConvert_Data
                     if section_name == 'BCLConvert_Data':
                         self.add_sample(Sample(dict(zip(sample_header, line))))
                 else:
                     sample_header = [item for item in line if item]
-                    section['content'] = []
                 continue
 
             # Setting section handling - keys in first column and values in second column.
@@ -1110,9 +1135,11 @@ class SampleSheetV2(SampleSheetBase):
         """
         content = {
             'Header': dict(self.Header),
-            'Reads': self.Reads,
-            'Data': [sample.to_json() for sample in self.samples],
+            'Reads': dict(self.Reads),
+            'BCLConvert_Settings': dict(self.BCLConvert_Settings),
+            'BCLConvert_Data': [sample.to_json() for sample in self.samples],
             **{title: dict(getattr(self, title)) for title in self._sections},
+            **{title: getattr(self, title) for title in self._data_sections},
         }
         return json.dumps(content, **kwargs)  # type: ignore
 
@@ -1128,7 +1155,7 @@ class SampleSheetV2(SampleSheetBase):
             raise ValueError('Number of blank lines must be a positive int.')
 
         writer = csv.writer(handle)
-        csv_width: int = max([len(self.all_sample_keys), 2])
+        csv_width: int = self._csv_width
 
         section_order = ['Header', 'Reads', 'BCLConvert_Settings']
 
@@ -1143,20 +1170,44 @@ class SampleSheetV2(SampleSheetBase):
             for i in range(n):
                 writer.writerow(pad_iterable([], width))
 
+        # write Header, Reads, BCLConvert_Settings sections
         for title in section_order:
             writer.writerow(pad_iterable([f'[{title}]'], csv_width))
             section = getattr(self, title)
-
             for key, value in section.items():
                 writer.writerow(pad_iterable([key, value], csv_width))
             write_blank_lines(writer)
 
+        # write BCLConvert_Data section
         writer.writerow(pad_iterable(['[BCLConvert_Data]'], csv_width))
         writer.writerow(pad_iterable(self.all_sample_keys, csv_width))
-
         for sample in self.samples:
             line = [getattr(sample, key) for key in self.all_sample_keys]
             writer.writerow(pad_iterable(line, csv_width))
+        write_blank_lines(writer)
+
+        # write extensible paired sections, e.g. DragenEnrichment_Settings and DragenEnrichment_Data
+        for i in range(0, len(self._sections)):
+
+            # Settings
+            title = self._sections[i]
+            writer.writerow(pad_iterable([f'[{title}]'], csv_width))
+            section = getattr(self, title)
+            for key, value in section.items():
+                writer.writerow(pad_iterable([key, value], csv_width))
+            write_blank_lines(writer)
+
+            # Data
+            title = self._data_sections[i]
+            writer.writerow(pad_iterable([f'[{title}]'], csv_width))
+            section = getattr(self, title)
+            if not len(section) > 0:
+                return
+            keys = section[0].keys()
+            writer.writerow(pad_iterable(keys, csv_width))
+            for entry in section:
+                line = [entry.get(key, '') for key in keys]
+                writer.writerow(pad_iterable(line, csv_width))
 
     def add_sample(self, sample: Sample) -> None:
         """Add a :class:`Sample` to this :class:`SampleSheet`.
