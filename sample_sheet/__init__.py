@@ -1,11 +1,10 @@
 import csv
-import importlib
 import json
 import os
 import re
 import sys
 import warnings
-
+from abc import ABC
 from contextlib import ExitStack
 from itertools import chain, repeat, islice
 from pathlib import Path
@@ -382,7 +381,7 @@ class DataSection(List):
             super().__init__(data)
 
 
-class SampleSheetBase(object):
+class SampleSheetBase(ABC):
     """A representation of an Illumina sample sheet.
 
     A sample sheet document almost conform to the ``.ini`` standards, but does
