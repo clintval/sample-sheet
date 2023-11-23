@@ -1104,7 +1104,7 @@ class SampleSheetV2(SampleSheetBase):
 
             # Data section handling - create a ${section_name} Section with an attribute `content`, which is as an
             # array, and each row of the data section is converted as a dictionary and append to it.
-            section: Section = getattr(self, section_name)
+            section = getattr(self, section_name)
             if section_name.endswith('_Data'):
                 if sample_header is not None:
                     section.append(dict(zip(sample_header, line)))
