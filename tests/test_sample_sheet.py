@@ -339,14 +339,20 @@ class TestSampleSheet(TestCase):
             '[Data]\n'
             'Sample_ID, Description\n'
             'test2, Sample Description\n'
-        )        
+        )
         sample_sheet = SampleSheet(filename)
-        eq_(sample_sheet.Header, {'IEMFileVersion': '4',
-                                  'Chemistry': 'Default'})
+        eq_(
+            sample_sheet.Header,
+            {'IEMFileVersion': '4', 'Chemistry': 'Default'},
+        )
 
         eq_(len(sample_sheet.samples), 1)
-        eq_(sample_sheet.samples[0], Sample({'Sample_ID': 'test2',
-                                             'Description': 'Sample Description'}))
+        eq_(
+            sample_sheet.samples[0],
+            Sample(
+                {'Sample_ID': 'test2', 'Description': 'Sample Description'}
+            ),
+        )
 
     def test_experiment_design_plain_text(self):
         """Test ``experimental_design()`` plain text output"""
@@ -632,7 +638,7 @@ class TestSampleSheet(TestCase):
             self.assertMultiLineEqual(string_handle.read(), handle.read())
 
     def test_read_with_additional_section(self):
-        """"Test ``SampleSheet.read()`` for reading with a Manifests section"""
+        """ "Test ``SampleSheet.read()`` for reading with a Manifests section"""
         infile = RESOURCES / 'paired-end-single-index-with-manifest.csv'
         sample_sheet = SampleSheet(infile)
         assert sample_sheet.Manifests.RNAPool == 'test'

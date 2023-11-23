@@ -342,12 +342,18 @@ class TestSampleSheetV2(TestCase):
             'test2, Sample Description\n'
         )
         sample_sheet = SampleSheetV2(filename)
-        eq_(sample_sheet.Header, {'IEMFileVersion': '4',
-                                  'Chemistry': 'Default'})
+        eq_(
+            sample_sheet.Header,
+            {'IEMFileVersion': '4', 'Chemistry': 'Default'},
+        )
 
         eq_(len(sample_sheet.samples), 1)
-        eq_(sample_sheet.samples[0], Sample({'Sample_ID': 'test2',
-                                             'Description': 'Sample Description'}))
+        eq_(
+            sample_sheet.samples[0],
+            Sample(
+                {'Sample_ID': 'test2', 'Description': 'Sample Description'}
+            ),
+        )
 
     def test_experiment_design_plain_text(self):
         """Test ``experimental_design()`` plain text output"""
@@ -539,7 +545,10 @@ class TestSampleSheetV2(TestCase):
         sample_sheet.Manifests_Settings['PoolRNA'] = 'RNAMatrix.txt'
         sample_sheet.Manifests_Settings['PoolDNA'] = 'DNAMatrix.txt'
 
-        assert list(sample_sheet.Manifests_Settings.keys()) == ['PoolRNA', 'PoolDNA']
+        assert list(sample_sheet.Manifests_Settings.keys()) == [
+            'PoolRNA',
+            'PoolDNA',
+        ]
 
         # Access via ``__getitem__()``
         eq_(sample_sheet.Manifests_Settings['PoolRNA'], 'RNAMatrix.txt')
@@ -564,9 +573,7 @@ class TestSampleSheetV2(TestCase):
         )
         sample_sheet.add_sample(sample)
         actual = sample_sheet.to_json(indent=4, sort_keys=True)
-        expected = (
-            '{\n    "BCLConvert_Data": [\n        {\n            "Sample_ID": "1823A",\n            "Sample_Name": "1823A-tissue",\n            "index": "ACGT"\n        }\n    ],\n    "BCLConvert_Settings": {},\n    "Header": {\n        "IEM4FileVersion": 4,\n        "Investigator Name": "jdoe"\n    },\n    "Reads": {\n        "Read1Cycles": "151",\n        "Read2Cycles": "151"\n    }\n}'
-        )
+        expected = '{\n    "BCLConvert_Data": [\n        {\n            "Sample_ID": "1823A",\n            "Sample_Name": "1823A-tissue",\n            "index": "ACGT"\n        }\n    ],\n    "BCLConvert_Settings": {},\n    "Header": {\n        "IEM4FileVersion": 4,\n        "Investigator Name": "jdoe"\n    },\n    "Reads": {\n        "Read1Cycles": "151",\n        "Read2Cycles": "151"\n    }\n}'
         eq_(expected, actual)
 
     def test_write(self):
@@ -597,7 +604,7 @@ class TestSampleSheetV2(TestCase):
         self.assertMultiLineEqual(string_handle.read(), string_handle2.read())
 
     def test_read_with_additional_section(self):
-        """"Test ``SampleSheet.read()`` for reading with a Manifests section"""
+        """ "Test ``SampleSheet.read()`` for reading with a Manifests section"""
         infile = RESOURCES / 'V2-paired-end-with-manifest.csv'
         sample_sheet = SampleSheetV2(infile)
         assert sample_sheet.Manifests_Settings.RNAPool == 'test'
@@ -659,7 +666,8 @@ class TestSampleSheetV2(TestCase):
         """Test ``__str__()``, when not printing to a TTY"""
         infile = RESOURCES / 'V2-paired-end.csv'
         eq_(
-            SampleSheetV2(infile).__str__(), 'SampleSheetV2(\'{}\')'.format(infile)
+            SampleSheetV2(infile).__str__(),
+            'SampleSheetV2(\'{}\')'.format(infile),
         )
 
     def test_repr(self):
@@ -669,4 +677,3 @@ class TestSampleSheetV2(TestCase):
             SampleSheetV2(infile).__repr__(),
             'SampleSheetV2(\'{}\')'.format(infile),
         )
-

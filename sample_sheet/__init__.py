@@ -272,7 +272,9 @@ class Sample(CaseInsensitiveDict):
 
     _valid_index_key_pattern = re.compile(r'index\d?')
     # https://kb.10xgenomics.com/hc/en-us/articles/218168503-What-oligos-are-in-my-sample-index-
-    _valid_index_value_pattern = re.compile(r'^[ACGTN]*$|^SI-[ACGTNS]{2}-[A-H]\d+$')
+    _valid_index_value_pattern = re.compile(
+        r'^[ACGTN]*$|^SI-[ACGTNS]{2}-[A-H]\d+$'
+    )
 
     def __init__(
         self, data: Optional[Mapping] = None, **kwargs: Mapping
@@ -318,17 +320,15 @@ class Sample(CaseInsensitiveDict):
             )
 
     def to_json(self) -> Mapping:
-        """Return the properties of this :class:`Sample` as JSON serializable.
-
-        """
+        """Return the properties of this :class:`Sample` as JSON serializable."""
         return {str(x): str(y) for x, y in self.items()}
 
     def __eq__(self, other: object) -> bool:
         """Samples are equal if the following attributes are equal:
 
-            - ``"Sample_ID"``
-            - ``"Library_ID"``
-            - ``"Lane"``
+        - ``"Sample_ID"``
+        - ``"Library_ID"``
+        - ``"Lane"``
 
         """
         if not isinstance(other, Sample):
@@ -356,9 +356,7 @@ class Sample(CaseInsensitiveDict):
 
 
 class Section(CaseInsensitiveDict):
-    """Case insensitive dictionary for retrieval, returns ``None`` as default.
-
-    """
+    """Case insensitive dictionary for retrieval, returns ``None`` as default."""
 
     def __init__(
         self, data: Optional[Mapping] = None, **kwargs: Mapping
@@ -372,10 +370,7 @@ class Section(CaseInsensitiveDict):
 
 
 class DataSection(List):
-
-    def __init__(
-            self, data: Optional[List] = None, **kwargs: List
-    ) -> None:
+    def __init__(self, data: Optional[List] = None, **kwargs: List) -> None:
         self._store: List
         if data:
             super().__init__(data)
@@ -410,7 +405,9 @@ class SampleSheetBase(ABC):
     _section_header_re = re.compile(r'\[(.*)\]')
     _whitespace_re = re.compile(r'\s+')
 
-    def __init__(self, path: Optional[Union[Path, str, TextIO]] = None) -> None:
+    def __init__(
+        self, path: Optional[Union[Path, str, TextIO]] = None
+    ) -> None:
         self.path = path
 
         self._samples: List[Sample] = []
@@ -652,7 +649,9 @@ class SampleSheetBase(ABC):
 
 
 class SampleSheet(SampleSheetBase):
-    def __init__(self, path: Optional[Union[Path, str, TextIO]] = None) -> None:
+    def __init__(
+        self, path: Optional[Union[Path, str, TextIO]] = None
+    ) -> None:
         super(SampleSheet, self).__init__(path)
         self.Reads: List[int] = []
 
@@ -1024,12 +1023,19 @@ class SampleSheet(SampleSheetBase):
 
 
 class SampleSheetV2(SampleSheetBase):
-    REQUIRED_SECTIONS_V2: List[str] = ['Header', 'Reads', 'BCLConvert_Settings', 'BCLConvert_Data']
+    REQUIRED_SECTIONS_V2: List[str] = [
+        'Header',
+        'Reads',
+        'BCLConvert_Settings',
+        'BCLConvert_Data',
+    ]
     _encoding: str = 'utf8'
     _section_header_re = re.compile(r'\[(.*)\]')
     _whitespace_re = re.compile(r'\s+')
 
-    def __init__(self, path: Optional[Union[Path, str, TextIO]] = None) -> None:
+    def __init__(
+        self, path: Optional[Union[Path, str, TextIO]] = None
+    ) -> None:
         super(SampleSheetV2, self).__init__(path)
         self.Reads: Section = Section()
         self.BCLConvert_Settings = Section()
@@ -1074,8 +1080,8 @@ class SampleSheetV2(SampleSheetBase):
 
             # Raise exception if we encounter invalid characters.
             if any(
-                    character not in VALID_ASCII
-                    for character in set(''.join(line))
+                character not in VALID_ASCII
+                for character in set(''.join(line))
             ):
                 raise ValueError(
                     f'Sample sheet contains invalid characters on line '
@@ -1090,8 +1096,8 @@ class SampleSheetV2(SampleSheetBase):
                 sample_header = None
                 section_name, *_ = header_match.groups()
                 if (
-                        section_name not in self._sections
-                        and section_name not in self.REQUIRED_SECTIONS_V2
+                    section_name not in self._sections
+                    and section_name not in self.REQUIRED_SECTIONS_V2
                 ):
                     self.add_section(section_name)
                 continue
@@ -1118,12 +1124,20 @@ class SampleSheetV2(SampleSheetBase):
     @property
     def is_paired_end(self) -> Optional[bool]:
         """Return if the samples are paired-end."""
-        return None if not self.Reads else self.Reads.get('Read2Cycles', None) is not None
+        return (
+            None
+            if not self.Reads
+            else self.Reads.get('Read2Cycles', None) is not None
+        )
 
     @property
     def is_single_end(self) -> Optional[bool]:
         """Return if the samples are single-end."""
-        return None if not self.Reads else self.Reads.get('Read2Cycles', None) is None
+        return (
+            None
+            if not self.Reads
+            else self.Reads.get('Read2Cycles', None) is None
+        )
 
     def to_json(self, **kwargs: Mapping) -> str:
         """Write this :class:`SampleSheet` to JSON.
@@ -1187,7 +1201,6 @@ class SampleSheetV2(SampleSheetBase):
 
         # write extensible paired sections, e.g. DragenEnrichment_Settings and DragenEnrichment_Data
         for i in range(0, len(self._sections)):
-
             # Settings
             title = self._sections[i]
             writer.writerow(pad_iterable([f'[{title}]'], csv_width))
