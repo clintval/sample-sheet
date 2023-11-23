@@ -1,3 +1,6 @@
+CONTRIBUTING
+=============
+
 # How to Contribute
 
 Pull requests, feature requests, and issues welcome!
@@ -11,7 +14,7 @@ The complete test suite is configured through `Tox`:
 
 List all environments with:
 
-```
+```bash
 ❯ tox -av
 using tox.ini: .../sample-sheet/tox.ini
 using tox-3.1.2 from ../tox/__init__.py
@@ -21,7 +24,6 @@ py37 -> run the test suite with (basepython)
 lint -> check the code style
 type -> type check the library
 docs -> test building of HTML docs
-
 additional environments:
 dev  -> the official sample_sheet development environment
 ```
