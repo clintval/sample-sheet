@@ -107,3 +107,14 @@ class TestSample(TestCase):
                 '\'Sample_Name\': None, \'index\': None})'
             ),
         )
+
+    def test_upsert(self):
+        """Test equality based only on ``Sample_ID`` and ``Library_ID``."""
+        sample1 = Sample({'Sample_ID': 1, 'Library_ID': '10x'})
+        sample1.upsert({'Sample_ID': 1, 'patch_date': '20231224'})
+        eq_(
+            sample1,
+            Sample(
+                {'Sample_ID': 1, 'Library_ID': '10x', 'patch_date': '20231224'}
+            ),
+        )

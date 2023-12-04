@@ -354,6 +354,13 @@ class Sample(CaseInsensitiveDict):
         """Cast this object to string."""
         return str(self.Sample_ID) if self.Sample_ID is not None else ''
 
+    def upsert(self, data: dict) -> None:
+        if data:
+            assert 'Sample_ID' in data
+            assert data['Sample_ID'] == self['Sample_ID']
+            for key, value in data.items():
+                self[key] = value
+
 
 class Section(CaseInsensitiveDict):
     """Case insensitive dictionary for retrieval, returns ``None`` as default."""
@@ -1447,3 +1454,10 @@ class SampleSheetV2(SampleSheetBase):
             return self._repr_tty_()
         else:
             return self.__repr__()
+
+    def update_samples_with_section(self, section: str) -> None:
+        assert section in self._data_sections
+        pd = getattr(self, section)
+        assert len(self.samples) == len(pd)
+        for idx in range(len(self.samples)):
+            self.samples[idx].upsert(pd[idx])

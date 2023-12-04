@@ -129,6 +129,40 @@ class TestSampleSheetV2(TestCase):
         eq_(len(sample_sheet.samples), 2)
         eq_(sample_sheet.samples[0], sample1)
 
+    def test_patch_samples_by_section(self):
+        """Test ``write()`` by comparing a roundtrip of a sample sheet"""
+        infile = RESOURCES / 'V2-paired-end-seqslab.csv'
+        sample_sheet = SampleSheetV2(infile)
+        sample_sheet.update_samples_with_section("Cloud_Data")
+        sp1 = {
+            'Sample_ID': 'P1_Bcereus_IDP350_A04_01',
+            'Index': 'AACCATAGAA',
+            'Index2': 'GGCGAGATGG',
+            'ProjectName': 'NextSeq2000 Illumina DNA Prep small WGS on P1 600 cycles kit',
+            'LibraryName': 'P1_Bcereus_IDP350_A04_01_AACCATAGAA_GGCGAGATGG',
+            'LibraryPrepKitName': 'IlluminaDNAPrep',
+            'IndexAdapterKitName': 'IDTNexteraDnaUDIndexesSetA96Indexes',
+        }
+        eq_(sample_sheet.samples[0], Sample(sp1))
+
+        sp2 = {
+            'Sample_ID': 'P1_Bcereus_IDP350_A04_01',
+            'Index': 'GTCTGTCA',
+            'Index2': '',
+            'ProjectName': 'NextSeq2000 Illumina DNA Prep small WGS on P1 600 cycles kit',
+            'LibraryName': 'P1_Bcereus_IDP350_A04_01_AACCATAGAA_GGCGAGATGG',
+            'LibraryPrepKitName': 'IlluminaDNAPrep',
+            'IndexAdapterKitName': 'IDTNexteraDnaUDIndexesSetA96Indexes',
+            'DRS_ID': '%7B%24.extra_properties%5B%3Fcategory%3DRunName%5D%5Bvalues%5D%5B0%5D%7D-%7B%24.extra_properties%5B%3Fcategory%3DSample_ID%5D%5Bvalues%5D%5B0%5D%7D-%7B%24.extra_properties%5B%3Fcategory%3DPair%5D%5Bvalues%5D%5B0%5D%7D',
+            'Run_Name': 'NextSeq2K20231224',
+            'Read1_Label': 'GermlineAnalysis/inFileFqs/1/1',
+            'Read2_Label': 'GermlineAnalysis/inFileFqs/1/2',
+            'Workflow_URL': 'https://api.seqslab.net/trs/v2/tools/GermlineAnalysis/versions/1.0.0/WDL/files/',
+            'Runtimes': 'GermlineAnalysis=acu-m64l:CallingAndQC=acu-m64l:QcDeltaTable=acu-m4',
+        }
+        sample_sheet.update_samples_with_section("SeqsLabRunSheet_Data")
+        eq_(sample_sheet.samples[0], Sample(sp2))
+
     def test_add_sample_without_sample_id(self):
         """Test adding a sample without a sample ID"""
         sample = Sample()
