@@ -1060,12 +1060,12 @@ class SampleSheetV2(SampleSheetBase):
     def add_section(self, section_name: str) -> None:
         """Add a section to the :class:`SampleSheet`."""
         section_name = self._whitespace_re.sub('_', section_name)
-        if section_name.endswith('_Settings'):
-            self._sections.append(section_name)
-            setattr(self, section_name, Section())
-        elif section_name.endswith('_Data'):
+        if section_name.endswith('_Data'):
             self._data_sections.append(section_name)
             setattr(self, section_name, DataSection())
+        else:
+            self._sections.append(section_name)
+            setattr(self, section_name, Section())
 
     def _parse(self, handle: TextIO) -> None:
         section_name: str = ''
